@@ -1,0 +1,61 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+    "name": "Python 3",
+    "build": {
+        // More info: https://containers.dev/guide/dockerfile
+        "dockerfile": "Dockerfile",
+        // Change VARIANT to pick different Python version: 3, 3.10, 3.11, 3.12, ...
+        "args": {
+            "VARIANT": "3.12"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Python
+                "ms-python.python",
+                "ms-python.black-formatter",
+                "ms-toolsai.jupyter",
+                "ms-toolsai.jupyter-renderers",
+                "ms-python.vscode-pylance",
+                // Docker
+                "ms-azuretools.vscode-docker",
+                // Documentation
+                "njpwerner.autodocstring",
+                // Format
+                "stkb.rewrap",
+                // Lint
+                "charliermarsh.ruff",
+                // Gen AI
+                "GitHub.copilot"
+            ],
+            "settings": {
+                // Editor
+                "editor.formatOnSave": true,
+                // Files
+                "files.insertFinalNewline": true,
+                "files.trimTrailingWhitespace": true,
+                // Testing
+                "python.testing.pytestArgs": [
+                    "."
+                ],
+                "python.testing.unittestEnabled": false,
+                "python.testing.pytestEnabled": true,
+                "python.testing.autoTestDiscoverOnSaveEnabled": true,
+                // Formatting
+                "python.formatting.provider": "black",
+                "python.formatting.blackArgs": [
+                    "--no-color"
+                ],
+                // Linting
+                "python.linting.mypyEnabled": true,
+                "python.linting.enabled": true
+            },
+            "git.branchProtection": [
+                "main",
+                "master"
+            ]
+        }
+    },
+    "remoteUser": "vscode"
+}
