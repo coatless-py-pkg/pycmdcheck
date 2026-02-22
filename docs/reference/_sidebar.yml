@@ -1,0 +1,36 @@
+website:
+  sidebar:
+  - contents:
+    - reference/index.qmd
+    - contents:
+      - reference/check.qmd
+      - reference/CheckResult.qmd
+      - reference/CheckStatus.qmd
+      - reference/Report.qmd
+      section: Main API
+    - contents:
+      - reference/checks.base.Check.qmd
+      - reference/checks.base.BaseCheck.qmd
+      section: Check Protocol
+    - contents:
+      - reference/checks.metadata.MetadataCheck.qmd
+      - reference/checks.structure.StructureCheck.qmd
+      - reference/checks.tests.TestsCheck.qmd
+      - reference/checks.linting.LintingCheck.qmd
+      - reference/checks.typing.TypingCheck.qmd
+      - reference/checks.imports.ImportsCheck.qmd
+      - reference/checks.license.LicenseCheck.qmd
+      - reference/checks.docs.DocsCheck.qmd
+      section: Built-in Checks
+    - contents:
+      - reference/runner.run_checks.qmd
+      - reference/discovery.discover_checks.qmd
+      - reference/discovery.list_available_checks.qmd
+      section: Runner & Discovery
+    - contents:
+      - reference/config.load_config.qmd
+      - reference/config.get_check_config.qmd
+      - reference/config.is_check_enabled.qmd
+      section: Configuration
+    id: reference
+  - id: dummy-sidebar

@@ -1,0 +1,91 @@
+# CheckResult { #pycmdcheck.CheckResult }
+
+```python
+CheckResult(name, status, message, details=list(), duration=0.0)
+```
+
+Result of a single check.
+
+Contains the outcome of running a check, including the status,
+a human-readable message, and optional details.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Name of the check that produced this result (e.g., "metadata").
+
+<code>[**status**]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckStatus](`pycmdcheck.results.CheckStatus`)]{.parameter-annotation}</code>
+
+:   The status of the check (OK, WARNING, ERROR, etc.).
+
+<code>[**message**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Human-readable message describing the result.
+
+<code>[**details**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\]]{.parameter-annotation}</code>
+
+:   Optional list of detailed messages providing more context.
+
+<code>[**duration**]{.parameter-name} [:]{.parameter-annotation-sep} [[float](`float`)]{.parameter-annotation}</code>
+
+:   Time taken to run the check in seconds.
+
+## Examples {.doc-section .doc-section-examples}
+
+Create a successful check result:
+
+```python
+>>> result = CheckResult(
+...     name="metadata",
+...     status=CheckStatus.OK,
+...     message="Package metadata is valid",
+... )
+>>> result.status
+<CheckStatus.OK: 'ok'>
+```
+
+Create a result with details:
+
+```python
+>>> result = CheckResult(
+...     name="linting",
+...     status=CheckStatus.WARNING,
+...     message="Found 3 linting issues",
+...     details=["Line 10: E501 line too long", "Line 20: W503 line break"],
+... )
+>>> print(result)
+⚠ linting: Found 3 linting issues
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [to_dict](#pycmdcheck.CheckResult.to_dict) | Convert to dictionary for JSON serialization. |
+
+### to_dict { #pycmdcheck.CheckResult.to_dict }
+
+```python
+CheckResult.to_dict()
+```
+
+Convert to dictionary for JSON serialization.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   A dictionary with keys: name, status, message, details, duration.
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   The status is converted to its string value.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> result = CheckResult("test", CheckStatus.OK, "Passed")
+>>> result.to_dict()
+{'name': 'test', 'status': 'ok', 'message': 'Passed', 'details': [], 'duration': 0.0}
+```

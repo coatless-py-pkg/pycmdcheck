@@ -1,0 +1,101 @@
+# checks.docs.DocsCheck { #pycmdcheck.checks.docs.DocsCheck }
+
+```python
+checks.docs.DocsCheck()
+```
+
+Check for documentation presence and quality.
+
+Verifies that the package has a README file and optionally checks
+that public modules, classes, and functions have docstrings.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("docs").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+<code>[**README_FILENAMES**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   List of recognized README file names.
+
+## Configuration Options {.doc-section .doc-section-configuration-options}
+
+require_readme (bool): Whether README is required. Defaults to True.
+check_docstrings (bool): Whether to check for docstrings in code.
+    Defaults to False.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run the docs check with defaults:
+
+```python
+>>> from pathlib import Path
+>>> check = DocsCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'docs'
+```
+
+Enable docstring checking:
+
+```python
+>>> config = {"enabled": True, "check_docstrings": True}
+>>> result = check.run(Path("."), config)
+```
+
+Make README optional:
+
+```python
+>>> config = {"enabled": True, "require_readme": False}
+>>> result = check.run(Path("."), config)
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.docs.DocsCheck.run) | Check documentation presence and quality. |
+
+### run { #pycmdcheck.checks.docs.DocsCheck.run }
+
+```python
+checks.docs.DocsCheck.run(package_path, config)
+```
+
+Check documentation presence and quality.
+
+Looks for a README file and optionally scans code for missing
+docstrings on public items.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary with options:  - require_readme (bool): Require README (default: True) - check_docstrings (bool): Check code docstrings (default: False)
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if all documentation requirements met
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - NOTE status if minor improvements suggested
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if README missing (when required)

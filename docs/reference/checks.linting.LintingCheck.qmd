@@ -1,0 +1,105 @@
+# checks.linting.LintingCheck { #pycmdcheck.checks.linting.LintingCheck }
+
+```python
+checks.linting.LintingCheck()
+```
+
+Run linting tools on the package.
+
+Executes a configurable linting tool to check code quality and
+style. Supports ruff (default), flake8, and pylint.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("linting").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+<code>[**SUPPORTED_TOOLS**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   List of supported linting tools.
+
+## Configuration Options {.doc-section .doc-section-configuration-options}
+
+tool (str): Linter to use ("ruff", "flake8", or "pylint").
+    Defaults to "ruff".
+args (list[str]): Additional arguments to pass to the linter.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run linting with default settings (ruff):
+
+```python
+>>> from pathlib import Path
+>>> check = LintingCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'linting'
+```
+
+Configure to use flake8:
+
+```python
+>>> config = {"enabled": True, "tool": "flake8"}
+>>> result = check.run(Path("."), config)
+```
+
+Pass additional ruff arguments:
+
+```python
+>>> config = {"enabled": True, "args": ["--select", "E,W"]}
+>>> result = check.run(Path("."), config)
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.linting.LintingCheck.run) | Run linting check on the package. |
+
+### run { #pycmdcheck.checks.linting.LintingCheck.run }
+
+```python
+checks.linting.LintingCheck.run(package_path, config)
+```
+
+Run linting check on the package.
+
+Executes the configured linting tool and collects any issues found.
+Issues are reported in the result details (limited to first 10).
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to lint.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary with options:  - tool (str): "ruff", "flake8", or "pylint" (default: "ruff") - args (list[str]): Additional arguments for the linter
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if no linting issues found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if linting issues found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - ERROR status if linter fails or unsupported tool specified
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - SKIPPED status if the linting tool is not installed

@@ -1,0 +1,856 @@
+[
+  {
+    "objectID": "reference/checks.linting.LintingCheck.html",
+    "href": "reference/checks.linting.LintingCheck.html",
+    "title": "checks.linting.LintingCheck",
+    "section": "",
+    "text": "checks.linting.LintingCheck()\nRun linting tools on the package.\nExecutes a configurable linting tool to check code quality and style. Supports ruff (default), flake8, and pylint.\n\n\n\nname : \n\nThe check identifier (“linting”).\n\ndescription : \n\nHuman-readable description of this check.\n\nSUPPORTED_TOOLS : \n\nList of supported linting tools.\n\n\n\n\n\ntool (str): Linter to use (“ruff”, “flake8”, or “pylint”). Defaults to “ruff”. args (list[str]): Additional arguments to pass to the linter.\n\n\n\nRun linting with default settings (ruff):\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = LintingCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'linting'\nConfigure to use flake8:\n&gt;&gt;&gt; config = {\"enabled\": True, \"tool\": \"flake8\"}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nPass additional ruff arguments:\n&gt;&gt;&gt; config = {\"enabled\": True, \"args\": [\"--select\", \"E,W\"]}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nRun linting check on the package.\n\n\n\n\n\nchecks.linting.LintingCheck.run(package_path, config)\nRun linting check on the package.\nExecutes the configured linting tool and collects any issues found. Issues are reported in the result details (limited to first 10).\n\n\n\npackage_path : Path\n\nPath to the package directory to lint.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - tool (str): “ruff”, “flake8”, or “pylint” (default: “ruff”) - args (list[str]): Additional arguments for the linter\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if no linting issues found\n\n\n : CheckResult\n\n\nWARNING status if linting issues found\n\n\n : CheckResult\n\n\nERROR status if linter fails or unsupported tool specified\n\n\n : CheckResult\n\n\nSKIPPED status if the linting tool is not installed"
+  },
+  {
+    "objectID": "reference/checks.linting.LintingCheck.html#attributes",
+    "href": "reference/checks.linting.LintingCheck.html#attributes",
+    "title": "checks.linting.LintingCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“linting”).\n\ndescription : \n\nHuman-readable description of this check.\n\nSUPPORTED_TOOLS : \n\nList of supported linting tools."
+  },
+  {
+    "objectID": "reference/checks.linting.LintingCheck.html#configuration-options",
+    "href": "reference/checks.linting.LintingCheck.html#configuration-options",
+    "title": "checks.linting.LintingCheck",
+    "section": "",
+    "text": "tool (str): Linter to use (“ruff”, “flake8”, or “pylint”). Defaults to “ruff”. args (list[str]): Additional arguments to pass to the linter."
+  },
+  {
+    "objectID": "reference/checks.linting.LintingCheck.html#examples",
+    "href": "reference/checks.linting.LintingCheck.html#examples",
+    "title": "checks.linting.LintingCheck",
+    "section": "",
+    "text": "Run linting with default settings (ruff):\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = LintingCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'linting'\nConfigure to use flake8:\n&gt;&gt;&gt; config = {\"enabled\": True, \"tool\": \"flake8\"}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nPass additional ruff arguments:\n&gt;&gt;&gt; config = {\"enabled\": True, \"args\": [\"--select\", \"E,W\"]}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)"
+  },
+  {
+    "objectID": "reference/checks.linting.LintingCheck.html#methods",
+    "href": "reference/checks.linting.LintingCheck.html#methods",
+    "title": "checks.linting.LintingCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nRun linting check on the package.\n\n\n\n\n\nchecks.linting.LintingCheck.run(package_path, config)\nRun linting check on the package.\nExecutes the configured linting tool and collects any issues found. Issues are reported in the result details (limited to first 10).\n\n\n\npackage_path : Path\n\nPath to the package directory to lint.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - tool (str): “ruff”, “flake8”, or “pylint” (default: “ruff”) - args (list[str]): Additional arguments for the linter\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if no linting issues found\n\n\n : CheckResult\n\n\nWARNING status if linting issues found\n\n\n : CheckResult\n\n\nERROR status if linter fails or unsupported tool specified\n\n\n : CheckResult\n\n\nSKIPPED status if the linting tool is not installed"
+  },
+  {
+    "objectID": "reference/checks.structure.StructureCheck.html",
+    "href": "reference/checks.structure.StructureCheck.html",
+    "title": "checks.structure.StructureCheck",
+    "section": "",
+    "text": "checks.structure.StructureCheck()\nCheck that package has a valid directory structure.\nValidates that the package follows one of the standard Python package layouts:\n\nsrc layout: Package code in src/&lt;package_name&gt;/\nflat layout: Package code directly in project root\n\nThe check verifies that package directories contain __init__.py files and are properly structured.\n\n\n\nname : \n\nThe check identifier (“structure”).\n\ndescription : \n\nHuman-readable description of this check.\n\n\n\n\n\nRun the structure check:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = StructureCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'structure'\nCheck a package with src layout:\n&gt;&gt;&gt; # For a package with src/mypackage/__init__.py\n&gt;&gt;&gt; # result.status == CheckStatus.OK\n&gt;&gt;&gt; # result.details contains \"Using src layout\"\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nCheck package directory structure.\n\n\n\n\n\nchecks.structure.StructureCheck.run(package_path, config)\nCheck package directory structure.\nDetermines the layout type (src or flat) and validates that the package directories are properly formed with __init__.py files.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if valid src or flat layout found\n\n\n : CheckResult\n\n\nWARNING status if packages missing __init__.py\n\n\n : CheckResult\n\n\nERROR status if no package or module found"
+  },
+  {
+    "objectID": "reference/checks.structure.StructureCheck.html#attributes",
+    "href": "reference/checks.structure.StructureCheck.html#attributes",
+    "title": "checks.structure.StructureCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“structure”).\n\ndescription : \n\nHuman-readable description of this check."
+  },
+  {
+    "objectID": "reference/checks.structure.StructureCheck.html#examples",
+    "href": "reference/checks.structure.StructureCheck.html#examples",
+    "title": "checks.structure.StructureCheck",
+    "section": "",
+    "text": "Run the structure check:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = StructureCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'structure'\nCheck a package with src layout:\n&gt;&gt;&gt; # For a package with src/mypackage/__init__.py\n&gt;&gt;&gt; # result.status == CheckStatus.OK\n&gt;&gt;&gt; # result.details contains \"Using src layout\""
+  },
+  {
+    "objectID": "reference/checks.structure.StructureCheck.html#methods",
+    "href": "reference/checks.structure.StructureCheck.html#methods",
+    "title": "checks.structure.StructureCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nCheck package directory structure.\n\n\n\n\n\nchecks.structure.StructureCheck.run(package_path, config)\nCheck package directory structure.\nDetermines the layout type (src or flat) and validates that the package directories are properly formed with __init__.py files.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if valid src or flat layout found\n\n\n : CheckResult\n\n\nWARNING status if packages missing __init__.py\n\n\n : CheckResult\n\n\nERROR status if no package or module found"
+  },
+  {
+    "objectID": "reference/Report.html",
+    "href": "reference/Report.html",
+    "title": "Report",
+    "section": "",
+    "text": "Report(results=list(), package_path='')\nCollection of check results for a package.\nA Report aggregates multiple CheckResult objects and provides methods for querying the overall status and summarizing results.\n\n\n\nresults : list[CheckResult]\n\nList of CheckResult objects from running checks.\n\npackage_path : str\n\nPath to the package that was checked.\n\n\n\n\n\nCreate a report and add results:\n&gt;&gt;&gt; report = Report(package_path=\"/path/to/package\")\n&gt;&gt;&gt; report.add(CheckResult(\"metadata\", CheckStatus.OK, \"Valid\"))\n&gt;&gt;&gt; report.add(CheckResult(\"tests\", CheckStatus.OK, \"Passed\"))\n&gt;&gt;&gt; report.passed\nTrue\nCheck for specific failure conditions:\n&gt;&gt;&gt; report.failed_on([\"error\"])\nFalse\n&gt;&gt;&gt; report.failed_on([\"error\", \"warning\"])\nFalse\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nadd\nAdd a check result to the report.\n\n\ncount_by_status\nCount results by status.\n\n\nfailed_on\nCheck if any result matches the fail_on criteria.\n\n\nto_dict\nConvert to dictionary for JSON serialization.\n\n\n\n\n\nReport.add(result)\nAdd a check result to the report.\n\n\n\nresult : CheckResult\n\nThe CheckResult to add.\n\n\n\n\n\n&gt;&gt;&gt; report = Report()\n&gt;&gt;&gt; report.add(CheckResult(\"test\", CheckStatus.OK, \"Passed\"))\n&gt;&gt;&gt; len(report.results)\n1\n\n\n\n\nReport.count_by_status()\nCount results by status.\n\n\n\n : dict[CheckStatus, int]\n\nA dictionary mapping each CheckStatus to the count of results\n\n : dict[CheckStatus, int]\n\nwith that status.\n\n\n\n\n\n&gt;&gt;&gt; report = Report()\n&gt;&gt;&gt; report.add(CheckResult(\"a\", CheckStatus.OK, \"OK\"))\n&gt;&gt;&gt; report.add(CheckResult(\"b\", CheckStatus.OK, \"OK\"))\n&gt;&gt;&gt; report.add(CheckResult(\"c\", CheckStatus.WARNING, \"Warn\"))\n&gt;&gt;&gt; counts = report.count_by_status()\n&gt;&gt;&gt; counts[CheckStatus.OK]\n2\n&gt;&gt;&gt; counts[CheckStatus.WARNING]\n1\n\n\n\n\nReport.failed_on(fail_on)\nCheck if any result matches the fail_on criteria.\n\n\n\nfail_on : list[str]\n\nList of status values to consider as failures (e.g., [“error”, “warning”]).\n\n\n\n\n\n\n : bool\n\nTrue if any result has a status in the fail_on list.\n\n\n\n\n\n&gt;&gt;&gt; report = Report()\n&gt;&gt;&gt; report.add(CheckResult(\"test\", CheckStatus.WARNING, \"Warn\"))\n&gt;&gt;&gt; report.failed_on([\"error\"])\nFalse\n&gt;&gt;&gt; report.failed_on([\"error\", \"warning\"])\nTrue\n\n\n\n\nReport.to_dict()\nConvert to dictionary for JSON serialization.\n\n\n\n : dict[str, Any]\n\nA dictionary containing:\n\n : dict[str, Any]\n\n\npackage_path: The path that was checked\n\n\n : dict[str, Any]\n\n\npassed: Whether all checks passed\n\n\n : dict[str, Any]\n\n\nsummary: Count of each status\n\n\n : dict[str, Any]\n\n\nresults: List of result dictionaries\n\n\n\n\n\n\n&gt;&gt;&gt; report = Report(package_path=\"/pkg\")\n&gt;&gt;&gt; report.add(CheckResult(\"test\", CheckStatus.OK, \"OK\"))\n&gt;&gt;&gt; data = report.to_dict()\n&gt;&gt;&gt; data[\"passed\"]\nTrue\n&gt;&gt;&gt; data[\"summary\"][\"ok\"]\n1"
+  },
+  {
+    "objectID": "reference/Report.html#attributes",
+    "href": "reference/Report.html#attributes",
+    "title": "Report",
+    "section": "",
+    "text": "results : list[CheckResult]\n\nList of CheckResult objects from running checks.\n\npackage_path : str\n\nPath to the package that was checked."
+  },
+  {
+    "objectID": "reference/Report.html#examples",
+    "href": "reference/Report.html#examples",
+    "title": "Report",
+    "section": "",
+    "text": "Create a report and add results:\n&gt;&gt;&gt; report = Report(package_path=\"/path/to/package\")\n&gt;&gt;&gt; report.add(CheckResult(\"metadata\", CheckStatus.OK, \"Valid\"))\n&gt;&gt;&gt; report.add(CheckResult(\"tests\", CheckStatus.OK, \"Passed\"))\n&gt;&gt;&gt; report.passed\nTrue\nCheck for specific failure conditions:\n&gt;&gt;&gt; report.failed_on([\"error\"])\nFalse\n&gt;&gt;&gt; report.failed_on([\"error\", \"warning\"])\nFalse"
+  },
+  {
+    "objectID": "reference/Report.html#methods",
+    "href": "reference/Report.html#methods",
+    "title": "Report",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nadd\nAdd a check result to the report.\n\n\ncount_by_status\nCount results by status.\n\n\nfailed_on\nCheck if any result matches the fail_on criteria.\n\n\nto_dict\nConvert to dictionary for JSON serialization.\n\n\n\n\n\nReport.add(result)\nAdd a check result to the report.\n\n\n\nresult : CheckResult\n\nThe CheckResult to add.\n\n\n\n\n\n&gt;&gt;&gt; report = Report()\n&gt;&gt;&gt; report.add(CheckResult(\"test\", CheckStatus.OK, \"Passed\"))\n&gt;&gt;&gt; len(report.results)\n1\n\n\n\n\nReport.count_by_status()\nCount results by status.\n\n\n\n : dict[CheckStatus, int]\n\nA dictionary mapping each CheckStatus to the count of results\n\n : dict[CheckStatus, int]\n\nwith that status.\n\n\n\n\n\n&gt;&gt;&gt; report = Report()\n&gt;&gt;&gt; report.add(CheckResult(\"a\", CheckStatus.OK, \"OK\"))\n&gt;&gt;&gt; report.add(CheckResult(\"b\", CheckStatus.OK, \"OK\"))\n&gt;&gt;&gt; report.add(CheckResult(\"c\", CheckStatus.WARNING, \"Warn\"))\n&gt;&gt;&gt; counts = report.count_by_status()\n&gt;&gt;&gt; counts[CheckStatus.OK]\n2\n&gt;&gt;&gt; counts[CheckStatus.WARNING]\n1\n\n\n\n\nReport.failed_on(fail_on)\nCheck if any result matches the fail_on criteria.\n\n\n\nfail_on : list[str]\n\nList of status values to consider as failures (e.g., [“error”, “warning”]).\n\n\n\n\n\n\n : bool\n\nTrue if any result has a status in the fail_on list.\n\n\n\n\n\n&gt;&gt;&gt; report = Report()\n&gt;&gt;&gt; report.add(CheckResult(\"test\", CheckStatus.WARNING, \"Warn\"))\n&gt;&gt;&gt; report.failed_on([\"error\"])\nFalse\n&gt;&gt;&gt; report.failed_on([\"error\", \"warning\"])\nTrue\n\n\n\n\nReport.to_dict()\nConvert to dictionary for JSON serialization.\n\n\n\n : dict[str, Any]\n\nA dictionary containing:\n\n : dict[str, Any]\n\n\npackage_path: The path that was checked\n\n\n : dict[str, Any]\n\n\npassed: Whether all checks passed\n\n\n : dict[str, Any]\n\n\nsummary: Count of each status\n\n\n : dict[str, Any]\n\n\nresults: List of result dictionaries\n\n\n\n\n\n\n&gt;&gt;&gt; report = Report(package_path=\"/pkg\")\n&gt;&gt;&gt; report.add(CheckResult(\"test\", CheckStatus.OK, \"OK\"))\n&gt;&gt;&gt; data = report.to_dict()\n&gt;&gt;&gt; data[\"passed\"]\nTrue\n&gt;&gt;&gt; data[\"summary\"][\"ok\"]\n1"
+  },
+  {
+    "objectID": "reference/CheckResult.html",
+    "href": "reference/CheckResult.html",
+    "title": "CheckResult",
+    "section": "",
+    "text": "CheckResult(name, status, message, details=list(), duration=0.0)\nResult of a single check.\nContains the outcome of running a check, including the status, a human-readable message, and optional details.\n\n\n\nname : str\n\nName of the check that produced this result (e.g., “metadata”).\n\nstatus : CheckStatus\n\nThe status of the check (OK, WARNING, ERROR, etc.).\n\nmessage : str\n\nHuman-readable message describing the result.\n\ndetails : list[str]\n\nOptional list of detailed messages providing more context.\n\nduration : float\n\nTime taken to run the check in seconds.\n\n\n\n\n\nCreate a successful check result:\n&gt;&gt;&gt; result = CheckResult(\n...     name=\"metadata\",\n...     status=CheckStatus.OK,\n...     message=\"Package metadata is valid\",\n... )\n&gt;&gt;&gt; result.status\n&lt;CheckStatus.OK: 'ok'&gt;\nCreate a result with details:\n&gt;&gt;&gt; result = CheckResult(\n...     name=\"linting\",\n...     status=CheckStatus.WARNING,\n...     message=\"Found 3 linting issues\",\n...     details=[\"Line 10: E501 line too long\", \"Line 20: W503 line break\"],\n... )\n&gt;&gt;&gt; print(result)\n⚠ linting: Found 3 linting issues\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nto_dict\nConvert to dictionary for JSON serialization.\n\n\n\n\n\nCheckResult.to_dict()\nConvert to dictionary for JSON serialization.\n\n\n\n : dict[str, Any]\n\nA dictionary with keys: name, status, message, details, duration.\n\n : dict[str, Any]\n\nThe status is converted to its string value.\n\n\n\n\n\n&gt;&gt;&gt; result = CheckResult(\"test\", CheckStatus.OK, \"Passed\")\n&gt;&gt;&gt; result.to_dict()\n{'name': 'test', 'status': 'ok', 'message': 'Passed', 'details': [], 'duration': 0.0}"
+  },
+  {
+    "objectID": "reference/CheckResult.html#attributes",
+    "href": "reference/CheckResult.html#attributes",
+    "title": "CheckResult",
+    "section": "",
+    "text": "name : str\n\nName of the check that produced this result (e.g., “metadata”).\n\nstatus : CheckStatus\n\nThe status of the check (OK, WARNING, ERROR, etc.).\n\nmessage : str\n\nHuman-readable message describing the result.\n\ndetails : list[str]\n\nOptional list of detailed messages providing more context.\n\nduration : float\n\nTime taken to run the check in seconds."
+  },
+  {
+    "objectID": "reference/CheckResult.html#examples",
+    "href": "reference/CheckResult.html#examples",
+    "title": "CheckResult",
+    "section": "",
+    "text": "Create a successful check result:\n&gt;&gt;&gt; result = CheckResult(\n...     name=\"metadata\",\n...     status=CheckStatus.OK,\n...     message=\"Package metadata is valid\",\n... )\n&gt;&gt;&gt; result.status\n&lt;CheckStatus.OK: 'ok'&gt;\nCreate a result with details:\n&gt;&gt;&gt; result = CheckResult(\n...     name=\"linting\",\n...     status=CheckStatus.WARNING,\n...     message=\"Found 3 linting issues\",\n...     details=[\"Line 10: E501 line too long\", \"Line 20: W503 line break\"],\n... )\n&gt;&gt;&gt; print(result)\n⚠ linting: Found 3 linting issues"
+  },
+  {
+    "objectID": "reference/CheckResult.html#methods",
+    "href": "reference/CheckResult.html#methods",
+    "title": "CheckResult",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nto_dict\nConvert to dictionary for JSON serialization.\n\n\n\n\n\nCheckResult.to_dict()\nConvert to dictionary for JSON serialization.\n\n\n\n : dict[str, Any]\n\nA dictionary with keys: name, status, message, details, duration.\n\n : dict[str, Any]\n\nThe status is converted to its string value.\n\n\n\n\n\n&gt;&gt;&gt; result = CheckResult(\"test\", CheckStatus.OK, \"Passed\")\n&gt;&gt;&gt; result.to_dict()\n{'name': 'test', 'status': 'ok', 'message': 'Passed', 'details': [], 'duration': 0.0}"
+  },
+  {
+    "objectID": "reference/checks.metadata.MetadataCheck.html",
+    "href": "reference/checks.metadata.MetadataCheck.html",
+    "title": "checks.metadata.MetadataCheck",
+    "section": "",
+    "text": "checks.metadata.MetadataCheck()\nCheck that package metadata is valid and complete.\nValidates package metadata according to PEP 621 (pyproject.toml). Checks for required fields (name, version) and recommends additional fields (description, readme, license, requires-python).\n\n\n\nname : \n\nThe check identifier (“metadata”).\n\ndescription : \n\nHuman-readable description of this check.\n\nREQUIRED_FIELDS : \n\nList of fields that must be present in [project].\n\nRECOMMENDED_FIELDS : \n\nList of fields that should be present.\n\n\n\n\n\nRun the metadata check on a package:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = MetadataCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.status in [CheckStatus.OK, CheckStatus.NOTE, CheckStatus.ERROR]\nTrue\nThe check validates pyproject.toml structure:\n&gt;&gt;&gt; check.REQUIRED_FIELDS\n['name', 'version']\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nCheck package metadata for validity and completeness.\n\n\n\n\n\nchecks.metadata.MetadataCheck.run(package_path, config)\nCheck package metadata for validity and completeness.\nLooks for pyproject.toml first (preferred), falling back to setup.py/setup.cfg (legacy). Validates required fields and suggests recommended fields.\n\n\n\npackage_path : Path\n\nPath to the package directory containing pyproject.toml or setup files.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all required and recommended fields present\n\n\n : CheckResult\n\n\nNOTE status if required fields present but some recommended missing\n\n\n : CheckResult\n\n\nWARNING status if using legacy setup.py/setup.cfg\n\n\n : CheckResult\n\n\nERROR status if pyproject.toml is invalid or missing required fields"
+  },
+  {
+    "objectID": "reference/checks.metadata.MetadataCheck.html#attributes",
+    "href": "reference/checks.metadata.MetadataCheck.html#attributes",
+    "title": "checks.metadata.MetadataCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“metadata”).\n\ndescription : \n\nHuman-readable description of this check.\n\nREQUIRED_FIELDS : \n\nList of fields that must be present in [project].\n\nRECOMMENDED_FIELDS : \n\nList of fields that should be present."
+  },
+  {
+    "objectID": "reference/checks.metadata.MetadataCheck.html#examples",
+    "href": "reference/checks.metadata.MetadataCheck.html#examples",
+    "title": "checks.metadata.MetadataCheck",
+    "section": "",
+    "text": "Run the metadata check on a package:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = MetadataCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.status in [CheckStatus.OK, CheckStatus.NOTE, CheckStatus.ERROR]\nTrue\nThe check validates pyproject.toml structure:\n&gt;&gt;&gt; check.REQUIRED_FIELDS\n['name', 'version']"
+  },
+  {
+    "objectID": "reference/checks.metadata.MetadataCheck.html#methods",
+    "href": "reference/checks.metadata.MetadataCheck.html#methods",
+    "title": "checks.metadata.MetadataCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nCheck package metadata for validity and completeness.\n\n\n\n\n\nchecks.metadata.MetadataCheck.run(package_path, config)\nCheck package metadata for validity and completeness.\nLooks for pyproject.toml first (preferred), falling back to setup.py/setup.cfg (legacy). Validates required fields and suggests recommended fields.\n\n\n\npackage_path : Path\n\nPath to the package directory containing pyproject.toml or setup files.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all required and recommended fields present\n\n\n : CheckResult\n\n\nNOTE status if required fields present but some recommended missing\n\n\n : CheckResult\n\n\nWARNING status if using legacy setup.py/setup.cfg\n\n\n : CheckResult\n\n\nERROR status if pyproject.toml is invalid or missing required fields"
+  },
+  {
+    "objectID": "reference/checks.typing.TypingCheck.html",
+    "href": "reference/checks.typing.TypingCheck.html",
+    "title": "checks.typing.TypingCheck",
+    "section": "",
+    "text": "checks.typing.TypingCheck()\nRun type checking tools on the package.\nExecutes a configurable static type checker to verify type annotations. Supports mypy (default) and pyright.\n\n\n\nname : \n\nThe check identifier (“typing”).\n\ndescription : \n\nHuman-readable description of this check.\n\nSUPPORTED_TOOLS : \n\nList of supported type checking tools.\n\n\n\n\n\ntool (str): Type checker to use (“mypy” or “pyright”). Defaults to “mypy”. strict (bool): Whether to enable strict mode. Defaults to False. args (list[str]): Additional arguments to pass to the type checker.\n\n\n\nRun type checking with default settings (mypy):\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = TypingCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'typing'\nConfigure to use pyright:\n&gt;&gt;&gt; config = {\"enabled\": True, \"tool\": \"pyright\"}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nEnable strict mode:\n&gt;&gt;&gt; config = {\"enabled\": True, \"strict\": True}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nRun type checking on the package.\n\n\n\n\n\nchecks.typing.TypingCheck.run(package_path, config)\nRun type checking on the package.\nExecutes the configured type checker and collects any errors found. Errors are reported in the result details (limited to first 10).\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - tool (str): “mypy” or “pyright” (default: “mypy”) - strict (bool): Enable strict mode (default: False) - args (list[str]): Additional arguments for the checker\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if no type errors found\n\n\n : CheckResult\n\n\nERROR status if type errors found or checker fails\n\n\n : CheckResult\n\n\nSKIPPED status if the type checker is not installed"
+  },
+  {
+    "objectID": "reference/checks.typing.TypingCheck.html#attributes",
+    "href": "reference/checks.typing.TypingCheck.html#attributes",
+    "title": "checks.typing.TypingCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“typing”).\n\ndescription : \n\nHuman-readable description of this check.\n\nSUPPORTED_TOOLS : \n\nList of supported type checking tools."
+  },
+  {
+    "objectID": "reference/checks.typing.TypingCheck.html#configuration-options",
+    "href": "reference/checks.typing.TypingCheck.html#configuration-options",
+    "title": "checks.typing.TypingCheck",
+    "section": "",
+    "text": "tool (str): Type checker to use (“mypy” or “pyright”). Defaults to “mypy”. strict (bool): Whether to enable strict mode. Defaults to False. args (list[str]): Additional arguments to pass to the type checker."
+  },
+  {
+    "objectID": "reference/checks.typing.TypingCheck.html#examples",
+    "href": "reference/checks.typing.TypingCheck.html#examples",
+    "title": "checks.typing.TypingCheck",
+    "section": "",
+    "text": "Run type checking with default settings (mypy):\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = TypingCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'typing'\nConfigure to use pyright:\n&gt;&gt;&gt; config = {\"enabled\": True, \"tool\": \"pyright\"}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nEnable strict mode:\n&gt;&gt;&gt; config = {\"enabled\": True, \"strict\": True}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)"
+  },
+  {
+    "objectID": "reference/checks.typing.TypingCheck.html#methods",
+    "href": "reference/checks.typing.TypingCheck.html#methods",
+    "title": "checks.typing.TypingCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nRun type checking on the package.\n\n\n\n\n\nchecks.typing.TypingCheck.run(package_path, config)\nRun type checking on the package.\nExecutes the configured type checker and collects any errors found. Errors are reported in the result details (limited to first 10).\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - tool (str): “mypy” or “pyright” (default: “mypy”) - strict (bool): Enable strict mode (default: False) - args (list[str]): Additional arguments for the checker\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if no type errors found\n\n\n : CheckResult\n\n\nERROR status if type errors found or checker fails\n\n\n : CheckResult\n\n\nSKIPPED status if the type checker is not installed"
+  },
+  {
+    "objectID": "reference/index.html",
+    "href": "reference/index.html",
+    "title": "API Reference",
+    "section": "",
+    "text": "Core functions and classes for using pycmdcheck\n\n\n\ncheck\nCheck a Python package for quality issues.\n\n\nCheckResult\nResult of a single check.\n\n\nCheckStatus\nStatus of a check result.\n\n\nReport\nCollection of check results for a package.\n\n\n\n\n\n\nBase classes for implementing custom checks\n\n\n\nchecks.base.Check\nProtocol defining the interface for all checks.\n\n\nchecks.base.BaseCheck\nAbstract base class for implementing checks.\n\n\n\n\n\n\nAll built-in check implementations\n\n\n\nchecks.metadata.MetadataCheck\nCheck that package metadata is valid and complete.\n\n\nchecks.structure.StructureCheck\nCheck that package has a valid directory structure.\n\n\nchecks.tests.TestsCheck\nRun package tests and report results.\n\n\nchecks.linting.LintingCheck\nRun linting tools on the package.\n\n\nchecks.typing.TypingCheck\nRun type checking tools on the package.\n\n\nchecks.imports.ImportsCheck\nCheck that all imports in the package can be resolved.\n\n\nchecks.license.LicenseCheck\nCheck that the package has a license file.\n\n\nchecks.docs.DocsCheck\nCheck for documentation presence and quality.\n\n\n\n\n\n\nAdvanced API for running checks programmatically\n\n\n\nrunner.run_checks\nRun checks on a package.\n\n\ndiscovery.discover_checks\nDiscover all registered checks via entry points.\n\n\ndiscovery.list_available_checks\nList all available checks with their descriptions.\n\n\n\n\n\n\nConfiguration loading utilities\n\n\n\nconfig.load_config\nLoad pycmdcheck configuration from pyproject.toml.\n\n\nconfig.get_check_config\nGet configuration for a specific check.\n\n\nconfig.is_check_enabled\nCheck if a specific check is enabled."
+  },
+  {
+    "objectID": "reference/index.html#main-api",
+    "href": "reference/index.html#main-api",
+    "title": "API Reference",
+    "section": "",
+    "text": "Core functions and classes for using pycmdcheck\n\n\n\ncheck\nCheck a Python package for quality issues.\n\n\nCheckResult\nResult of a single check.\n\n\nCheckStatus\nStatus of a check result.\n\n\nReport\nCollection of check results for a package."
+  },
+  {
+    "objectID": "reference/index.html#check-protocol",
+    "href": "reference/index.html#check-protocol",
+    "title": "API Reference",
+    "section": "",
+    "text": "Base classes for implementing custom checks\n\n\n\nchecks.base.Check\nProtocol defining the interface for all checks.\n\n\nchecks.base.BaseCheck\nAbstract base class for implementing checks."
+  },
+  {
+    "objectID": "reference/index.html#built-in-checks",
+    "href": "reference/index.html#built-in-checks",
+    "title": "API Reference",
+    "section": "",
+    "text": "All built-in check implementations\n\n\n\nchecks.metadata.MetadataCheck\nCheck that package metadata is valid and complete.\n\n\nchecks.structure.StructureCheck\nCheck that package has a valid directory structure.\n\n\nchecks.tests.TestsCheck\nRun package tests and report results.\n\n\nchecks.linting.LintingCheck\nRun linting tools on the package.\n\n\nchecks.typing.TypingCheck\nRun type checking tools on the package.\n\n\nchecks.imports.ImportsCheck\nCheck that all imports in the package can be resolved.\n\n\nchecks.license.LicenseCheck\nCheck that the package has a license file.\n\n\nchecks.docs.DocsCheck\nCheck for documentation presence and quality."
+  },
+  {
+    "objectID": "reference/index.html#runner-discovery",
+    "href": "reference/index.html#runner-discovery",
+    "title": "API Reference",
+    "section": "",
+    "text": "Advanced API for running checks programmatically\n\n\n\nrunner.run_checks\nRun checks on a package.\n\n\ndiscovery.discover_checks\nDiscover all registered checks via entry points.\n\n\ndiscovery.list_available_checks\nList all available checks with their descriptions."
+  },
+  {
+    "objectID": "reference/index.html#configuration",
+    "href": "reference/index.html#configuration",
+    "title": "API Reference",
+    "section": "",
+    "text": "Configuration loading utilities\n\n\n\nconfig.load_config\nLoad pycmdcheck configuration from pyproject.toml.\n\n\nconfig.get_check_config\nGet configuration for a specific check.\n\n\nconfig.is_check_enabled\nCheck if a specific check is enabled."
+  },
+  {
+    "objectID": "reference/check.html",
+    "href": "reference/check.html",
+    "title": "check",
+    "section": "",
+    "text": "check(path='.', *, checks=None, skip=None, fail_on=None)\nCheck a Python package for quality issues.\nThis is the main entry point for programmatic use of pycmdcheck. It discovers available checks via entry points, loads configuration from pyproject.toml, and runs the enabled checks.\n\n\n\npath : str = '.'\n\nPath to the package directory. Defaults to current directory.\n\nchecks : list[str] | None = None\n\nList of check names to run. If None, runs all enabled checks from configuration. Available checks: metadata, structure, tests, linting, typing, imports, license, docs.\n\nskip : list[str] | None = None\n\nList of check names to skip, even if enabled in configuration.\n\nfail_on : list[str] | None = None\n\nList of statuses to consider as failures when calling report.failed_on(). Defaults to [“error”]. Not used directly by this function but useful for the caller.\n\n\n\n\n\n\n : Report\n\nA Report object containing all check results. Use report.passed to\n\n : Report\n\ncheck if all checks passed, or iterate report.results for details.\n\n\n\n\n\nBasic usage - check current directory:\n&gt;&gt;&gt; from pycmdcheck import check\n&gt;&gt;&gt; report = check(\".\")\n&gt;&gt;&gt; report.passed\nTrue\nRun only specific checks:\n&gt;&gt;&gt; report = check(\".\", checks=[\"metadata\", \"tests\"])\n&gt;&gt;&gt; len(report.results)\n2\nSkip certain checks:\n&gt;&gt;&gt; report = check(\".\", skip=[\"typing\", \"linting\"])\nIterate over results:\n&gt;&gt;&gt; for result in report.results:\n...     print(f\"{result.status.symbol} {result.name}: {result.message}\")\n✓ metadata: Package metadata is valid\n✓ tests: All tests passed"
+  },
+  {
+    "objectID": "reference/check.html#parameters",
+    "href": "reference/check.html#parameters",
+    "title": "check",
+    "section": "",
+    "text": "path : str = '.'\n\nPath to the package directory. Defaults to current directory.\n\nchecks : list[str] | None = None\n\nList of check names to run. If None, runs all enabled checks from configuration. Available checks: metadata, structure, tests, linting, typing, imports, license, docs.\n\nskip : list[str] | None = None\n\nList of check names to skip, even if enabled in configuration.\n\nfail_on : list[str] | None = None\n\nList of statuses to consider as failures when calling report.failed_on(). Defaults to [“error”]. Not used directly by this function but useful for the caller."
+  },
+  {
+    "objectID": "reference/check.html#returns",
+    "href": "reference/check.html#returns",
+    "title": "check",
+    "section": "",
+    "text": ": Report\n\nA Report object containing all check results. Use report.passed to\n\n : Report\n\ncheck if all checks passed, or iterate report.results for details."
+  },
+  {
+    "objectID": "reference/check.html#examples",
+    "href": "reference/check.html#examples",
+    "title": "check",
+    "section": "",
+    "text": "Basic usage - check current directory:\n&gt;&gt;&gt; from pycmdcheck import check\n&gt;&gt;&gt; report = check(\".\")\n&gt;&gt;&gt; report.passed\nTrue\nRun only specific checks:\n&gt;&gt;&gt; report = check(\".\", checks=[\"metadata\", \"tests\"])\n&gt;&gt;&gt; len(report.results)\n2\nSkip certain checks:\n&gt;&gt;&gt; report = check(\".\", skip=[\"typing\", \"linting\"])\nIterate over results:\n&gt;&gt;&gt; for result in report.results:\n...     print(f\"{result.status.symbol} {result.name}: {result.message}\")\n✓ metadata: Package metadata is valid\n✓ tests: All tests passed"
+  },
+  {
+    "objectID": "reference/discovery.discover_checks.html",
+    "href": "reference/discovery.discover_checks.html",
+    "title": "discovery.discover_checks",
+    "section": "",
+    "text": "discovery.discover_checks()\nDiscover all registered checks via entry points.\nScans the pycmdcheck.checks entry point group and loads all registered check classes. Built-in checks are registered in the package’s pyproject.toml, and third-party packages can register additional checks.\nIf a check fails to load (e.g., due to an import error), a UserWarning is issued but discovery continues with other checks.\n\n\n\n : dict[str, type[Check]]\n\nA dictionary mapping check names (strings) to check classes.\n\n : dict[str, type[Check]]\n\nThe check classes implement the Check protocol from\n\n : dict[str, type[Check]]\n\npycmdcheck.checks.base.\n\n\n\n\n\nDiscover all available checks:\n&gt;&gt;&gt; checks = discover_checks()\n&gt;&gt;&gt; \"metadata\" in checks\nTrue\n&gt;&gt;&gt; \"tests\" in checks\nTrue\nGet a specific check class:\n&gt;&gt;&gt; checks = discover_checks()\n&gt;&gt;&gt; MetadataCheck = checks[\"metadata\"]\n&gt;&gt;&gt; instance = MetadataCheck()\n&gt;&gt;&gt; instance.name\n'metadata'"
+  },
+  {
+    "objectID": "reference/discovery.discover_checks.html#returns",
+    "href": "reference/discovery.discover_checks.html#returns",
+    "title": "discovery.discover_checks",
+    "section": "",
+    "text": ": dict[str, type[Check]]\n\nA dictionary mapping check names (strings) to check classes.\n\n : dict[str, type[Check]]\n\nThe check classes implement the Check protocol from\n\n : dict[str, type[Check]]\n\npycmdcheck.checks.base."
+  },
+  {
+    "objectID": "reference/discovery.discover_checks.html#examples",
+    "href": "reference/discovery.discover_checks.html#examples",
+    "title": "discovery.discover_checks",
+    "section": "",
+    "text": "Discover all available checks:\n&gt;&gt;&gt; checks = discover_checks()\n&gt;&gt;&gt; \"metadata\" in checks\nTrue\n&gt;&gt;&gt; \"tests\" in checks\nTrue\nGet a specific check class:\n&gt;&gt;&gt; checks = discover_checks()\n&gt;&gt;&gt; MetadataCheck = checks[\"metadata\"]\n&gt;&gt;&gt; instance = MetadataCheck()\n&gt;&gt;&gt; instance.name\n'metadata'"
+  },
+  {
+    "objectID": "reference/checks.base.BaseCheck.html",
+    "href": "reference/checks.base.BaseCheck.html",
+    "title": "checks.base.BaseCheck",
+    "section": "",
+    "text": "checks.base.BaseCheck()\nAbstract base class for implementing checks.\nThis is the recommended way to implement custom checks. Subclasses must override the name, description attributes and implement the run method.\n\n\n\nname : str\n\nUnique identifier for the check. Override in subclass.\n\ndescription : str\n\nHuman-readable description. Override in subclass.\n\n\n\n\n\nCreate a custom check:\n&gt;&gt;&gt; from pycmdcheck.checks.base import BaseCheck\n&gt;&gt;&gt; from pycmdcheck.results import CheckResult, CheckStatus\n&gt;&gt;&gt;\n&gt;&gt;&gt; class CopyrightCheck(BaseCheck):\n...     name = \"copyright\"\n...     description = \"Check for copyright headers\"\n...\n...     def run(self, package_path, config):\n...         # Check logic here\n...         return CheckResult(\n...             name=self.name,\n...             status=CheckStatus.OK,\n...             message=\"All files have copyright headers\",\n...         )\nRegister via entry points in pyproject.toml:\n[project.entry-points.\"pycmdcheck.checks\"]\ncopyright = \"my_package.checks:CopyrightCheck\"\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nExecute the check and return result.\n\n\n\n\n\nchecks.base.BaseCheck.run(package_path, config)\nExecute the check and return result.\nSubclasses must implement this method to perform the actual check.\n\n\n\npackage_path : Path\n\nPath to the package directory to check. This is always an absolute, resolved path.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Contains any options specified in pyproject.toml under [tool.pycmdcheck.checks.]. Common keys include “enabled” (bool) and check-specific options.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nname: Should match self.name\n\n\n : CheckResult\n\n\nstatus: One of CheckStatus values (OK, WARNING, ERROR, etc.)\n\n\n : CheckResult\n\n\nmessage: Brief description of the result\n\n\n : CheckResult\n\n\ndetails: Optional list of specific issues found\n\n\n\n\n\n\n&gt;&gt;&gt; def run(self, package_path, config):\n...     issues = self._find_issues(package_path)\n...     if issues:\n...         return CheckResult(\n...             name=self.name,\n...             status=CheckStatus.WARNING,\n...             message=f\"Found {len(issues)} issues\",\n...             details=issues,\n...         )\n...     return CheckResult(\n...         name=self.name,\n...         status=CheckStatus.OK,\n...         message=\"No issues found\",\n...     )"
+  },
+  {
+    "objectID": "reference/checks.base.BaseCheck.html#attributes",
+    "href": "reference/checks.base.BaseCheck.html#attributes",
+    "title": "checks.base.BaseCheck",
+    "section": "",
+    "text": "name : str\n\nUnique identifier for the check. Override in subclass.\n\ndescription : str\n\nHuman-readable description. Override in subclass."
+  },
+  {
+    "objectID": "reference/checks.base.BaseCheck.html#examples",
+    "href": "reference/checks.base.BaseCheck.html#examples",
+    "title": "checks.base.BaseCheck",
+    "section": "",
+    "text": "Create a custom check:\n&gt;&gt;&gt; from pycmdcheck.checks.base import BaseCheck\n&gt;&gt;&gt; from pycmdcheck.results import CheckResult, CheckStatus\n&gt;&gt;&gt;\n&gt;&gt;&gt; class CopyrightCheck(BaseCheck):\n...     name = \"copyright\"\n...     description = \"Check for copyright headers\"\n...\n...     def run(self, package_path, config):\n...         # Check logic here\n...         return CheckResult(\n...             name=self.name,\n...             status=CheckStatus.OK,\n...             message=\"All files have copyright headers\",\n...         )\nRegister via entry points in pyproject.toml:\n[project.entry-points.\"pycmdcheck.checks\"]\ncopyright = \"my_package.checks:CopyrightCheck\""
+  },
+  {
+    "objectID": "reference/checks.base.BaseCheck.html#methods",
+    "href": "reference/checks.base.BaseCheck.html#methods",
+    "title": "checks.base.BaseCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nExecute the check and return result.\n\n\n\n\n\nchecks.base.BaseCheck.run(package_path, config)\nExecute the check and return result.\nSubclasses must implement this method to perform the actual check.\n\n\n\npackage_path : Path\n\nPath to the package directory to check. This is always an absolute, resolved path.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Contains any options specified in pyproject.toml under [tool.pycmdcheck.checks.]. Common keys include “enabled” (bool) and check-specific options.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nname: Should match self.name\n\n\n : CheckResult\n\n\nstatus: One of CheckStatus values (OK, WARNING, ERROR, etc.)\n\n\n : CheckResult\n\n\nmessage: Brief description of the result\n\n\n : CheckResult\n\n\ndetails: Optional list of specific issues found\n\n\n\n\n\n\n&gt;&gt;&gt; def run(self, package_path, config):\n...     issues = self._find_issues(package_path)\n...     if issues:\n...         return CheckResult(\n...             name=self.name,\n...             status=CheckStatus.WARNING,\n...             message=f\"Found {len(issues)} issues\",\n...             details=issues,\n...         )\n...     return CheckResult(\n...         name=self.name,\n...         status=CheckStatus.OK,\n...         message=\"No issues found\",\n...     )"
+  },
+  {
+    "objectID": "reference/config.load_config.html",
+    "href": "reference/config.load_config.html",
+    "title": "config.load_config",
+    "section": "",
+    "text": "config.load_config(package_path)\nLoad pycmdcheck configuration from pyproject.toml.\nReads the [tool.pycmdcheck] section from the package’s pyproject.toml and merges it with default configuration. If no pyproject.toml exists or it doesn’t contain pycmdcheck configuration, returns defaults.\n\n\n\npackage_path : Path\n\nPath to the package directory containing pyproject.toml.\n\n\n\n\n\n\n : dict[str, Any]\n\nConfiguration dictionary with the following structure:\n\n : dict[str, Any]\n\n\nfail_on: List of statuses to fail on (default: [“error”])\n\n\n : dict[str, Any]\n\n\nchecks: Dictionary of check configurations\n\n\n\n\n\n\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; config = load_config(Path(\".\"))\n&gt;&gt;&gt; config[\"fail_on\"]\n['error']\n&gt;&gt;&gt; config[\"checks\"][\"tests\"][\"runner\"]\n'pytest'"
+  },
+  {
+    "objectID": "reference/config.load_config.html#parameters",
+    "href": "reference/config.load_config.html#parameters",
+    "title": "config.load_config",
+    "section": "",
+    "text": "package_path : Path\n\nPath to the package directory containing pyproject.toml."
+  },
+  {
+    "objectID": "reference/config.load_config.html#returns",
+    "href": "reference/config.load_config.html#returns",
+    "title": "config.load_config",
+    "section": "",
+    "text": ": dict[str, Any]\n\nConfiguration dictionary with the following structure:\n\n : dict[str, Any]\n\n\nfail_on: List of statuses to fail on (default: [“error”])\n\n\n : dict[str, Any]\n\n\nchecks: Dictionary of check configurations"
+  },
+  {
+    "objectID": "reference/config.load_config.html#examples",
+    "href": "reference/config.load_config.html#examples",
+    "title": "config.load_config",
+    "section": "",
+    "text": "&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; config = load_config(Path(\".\"))\n&gt;&gt;&gt; config[\"fail_on\"]\n['error']\n&gt;&gt;&gt; config[\"checks\"][\"tests\"][\"runner\"]\n'pytest'"
+  },
+  {
+    "objectID": "getting-started.html",
+    "href": "getting-started.html",
+    "title": "Getting Started",
+    "section": "",
+    "text": "pip install pycmdcheck\n\n\n\nuv add pycmdcheck\n\n\n\npycmdcheck can use external tools for linting and type checking. Install the optional dependencies based on your needs:\n# For mypy type checking\npip install pycmdcheck[typing-mypy]\n\n# For pyright type checking\npip install pycmdcheck[typing-pyright]\n\n# For ruff linting\npip install pycmdcheck[linting]\n\n# All optional dependencies\npip install pycmdcheck[all]"
+  },
+  {
+    "objectID": "getting-started.html#installation",
+    "href": "getting-started.html#installation",
+    "title": "Getting Started",
+    "section": "",
+    "text": "pip install pycmdcheck\n\n\n\nuv add pycmdcheck\n\n\n\npycmdcheck can use external tools for linting and type checking. Install the optional dependencies based on your needs:\n# For mypy type checking\npip install pycmdcheck[typing-mypy]\n\n# For pyright type checking\npip install pycmdcheck[typing-pyright]\n\n# For ruff linting\npip install pycmdcheck[linting]\n\n# All optional dependencies\npip install pycmdcheck[all]"
+  },
+  {
+    "objectID": "getting-started.html#your-first-check",
+    "href": "getting-started.html#your-first-check",
+    "title": "Getting Started",
+    "section": "Your First Check",
+    "text": "Your First Check\n\nUsing the CLI\nNavigate to your Python package directory and run:\npycmdcheck\nYou’ll see output like:\nChecking package: /path/to/your/package\n\n┏━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃ St… ┃ Check     ┃ Message                    ┃\n┡━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩\n│  ✓  │ docs      │ Documentation present      │\n│  ✓  │ imports   │ All imports are valid      │\n│  ✓  │ license   │ License file present       │\n│  ✓  │ linting   │ No linting issues found    │\n│  ✓  │ metadata  │ Package metadata is valid  │\n│  ✓  │ structure │ Valid src layout structure │\n│  ✓  │ tests     │ All tests passed           │\n│  ✓  │ typing    │ No type errors found       │\n└─────┴───────────┴────────────────────────────┘\n\n8 ok\n\nAll checks passed!\n\n\nUsing Python\nfrom pycmdcheck import check\n\n# Check current directory\nreport = check(\".\")\n\n# Print summary\nprint(f\"Passed: {report.passed}\")\nprint(f\"Results: {len(report.results)} checks run\")\n\n# Iterate over results\nfor result in report.results:\n    print(f\"{result.status.symbol} {result.name}: {result.message}\")"
+  },
+  {
+    "objectID": "getting-started.html#understanding-check-results",
+    "href": "getting-started.html#understanding-check-results",
+    "title": "Getting Started",
+    "section": "Understanding Check Results",
+    "text": "Understanding Check Results\nEach check returns one of five statuses:\n\n\n\nStatus\nSymbol\nDescription\n\n\n\n\nOK\n✓\nCheck passed successfully\n\n\nNOTE\nℹ\nInformational message, not a problem\n\n\nWARNING\n⚠\nPotential issue, should be reviewed\n\n\nERROR\n✗\nCheck failed\n\n\nSKIPPED\n○\nCheck was skipped (e.g., tool not installed)"
+  },
+  {
+    "objectID": "getting-started.html#built-in-checks",
+    "href": "getting-started.html#built-in-checks",
+    "title": "Getting Started",
+    "section": "Built-in Checks",
+    "text": "Built-in Checks\npycmdcheck includes 8 built-in checks:\n\n\n\nCheck\nDescription\n\n\n\n\nmetadata\nValidates pyproject.toml has required fields\n\n\nstructure\nChecks package directory structure\n\n\ntests\nRuns pytest or unittest\n\n\nlinting\nRuns ruff, flake8, or pylint\n\n\ntyping\nRuns mypy or pyright\n\n\nimports\nValidates all imports resolve\n\n\nlicense\nChecks for LICENSE file\n\n\ndocs\nChecks for README file"
+  },
+  {
+    "objectID": "getting-started.html#next-steps",
+    "href": "getting-started.html#next-steps",
+    "title": "Getting Started",
+    "section": "Next Steps",
+    "text": "Next Steps\n\nCLI Reference - Learn all CLI options\nConfiguration - Configure checks in pyproject.toml\nCustom Checks - Create your own checks"
+  },
+  {
+    "objectID": "cli.html",
+    "href": "cli.html",
+    "title": "CLI Reference",
+    "section": "",
+    "text": "pycmdcheck [OPTIONS] [PATH]\nPATH: Directory to check (defaults to current directory)"
+  },
+  {
+    "objectID": "cli.html#basic-usage",
+    "href": "cli.html#basic-usage",
+    "title": "CLI Reference",
+    "section": "",
+    "text": "pycmdcheck [OPTIONS] [PATH]\nPATH: Directory to check (defaults to current directory)"
+  },
+  {
+    "objectID": "cli.html#options",
+    "href": "cli.html#options",
+    "title": "CLI Reference",
+    "section": "Options",
+    "text": "Options\n\n-c, --check\nRun only specific check(s). Can be specified multiple times.\n# Run only metadata check\npycmdcheck -c metadata\n\n# Run metadata and tests checks\npycmdcheck -c metadata -c tests\n\n\n-s, --skip\nSkip specific check(s). Can be specified multiple times.\n# Skip typing check\npycmdcheck -s typing\n\n# Skip typing and linting\npycmdcheck -s typing -s linting\n\n\n--fail-on\nExit with non-zero code on specified statuses. Can be specified multiple times. Default: error\n# Fail on errors only (default)\npycmdcheck --fail-on error\n\n# Fail on errors and warnings\npycmdcheck --fail-on error --fail-on warning\n\n# Fail on any issue including notes\npycmdcheck --fail-on error --fail-on warning --fail-on note\n\n\n--list\nList all available checks and exit.\npycmdcheck --list\nOutput:\n                     Available Checks\n┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓\n┃ Name      ┃ Description                                ┃\n┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩\n│ docs      │ Check documentation (README, docstrings)   │\n│ imports   │ Validate package imports                   │\n│ license   │ Check for license file                     │\n│ linting   │ Run code linting (ruff/flake8/pylint)      │\n│ metadata  │ Validate package metadata (pyproject.toml) │\n│ structure │ Validate package directory structure       │\n│ tests     │ Run package tests (pytest/unittest)        │\n│ typing    │ Run type checking (mypy/pyright)           │\n└───────────┴────────────────────────────────────────────┘\n\n\n-v, --verbose\nShow detailed output including timing and details for each check.\npycmdcheck -v\n\n\n--json\nOutput results as JSON for programmatic consumption.\npycmdcheck --json\nExample output:\n{\n  \"package_path\": \"/path/to/package\",\n  \"passed\": true,\n  \"summary\": {\n    \"ok\": 8,\n    \"note\": 0,\n    \"warning\": 0,\n    \"error\": 0,\n    \"skipped\": 0\n  },\n  \"results\": [\n    {\n      \"name\": \"metadata\",\n      \"status\": \"ok\",\n      \"message\": \"Package metadata is valid\",\n      \"details\": [\"All metadata fields present\"],\n      \"duration\": 0.001\n    }\n  ]\n}\n\n\n--no-parallel\nRun checks sequentially instead of in parallel.\npycmdcheck --no-parallel\n\n\n--version\nShow version and exit.\npycmdcheck --version\n\n\n--help\nShow help message and exit.\npycmdcheck --help"
+  },
+  {
+    "objectID": "cli.html#exit-codes",
+    "href": "cli.html#exit-codes",
+    "title": "CLI Reference",
+    "section": "Exit Codes",
+    "text": "Exit Codes\n\n\n\nCode\nMeaning\n\n\n\n\n0\nAll checks passed (no status matching --fail-on)\n\n\n1\nOne or more checks failed (status matched --fail-on)"
+  },
+  {
+    "objectID": "cli.html#examples",
+    "href": "cli.html#examples",
+    "title": "CLI Reference",
+    "section": "Examples",
+    "text": "Examples\n\nCI/CD Integration\n# Fail on any error (default behavior)\npycmdcheck\n\n# Stricter: fail on warnings too\npycmdcheck --fail-on error --fail-on warning\n\n# Skip slow checks in CI\npycmdcheck -s typing\n\n# JSON output for parsing\npycmdcheck --json &gt; results.json\n\n\nDevelopment Workflow\n# Quick check during development\npycmdcheck -c metadata -c structure\n\n# Full check before commit\npycmdcheck -v\n\n# List what will be checked\npycmdcheck --list\n\n\nUsing with uv\n# Run via uv\nuv run pycmdcheck\n\n# With options\nuv run pycmdcheck -c tests -v"
+  },
+  {
+    "objectID": "custom-checks.html",
+    "href": "custom-checks.html",
+    "title": "Custom Checks",
+    "section": "",
+    "text": "pycmdcheck is designed to be extensible. You can create custom checks and register them via Python entry points."
+  },
+  {
+    "objectID": "custom-checks.html#the-check-protocol",
+    "href": "custom-checks.html#the-check-protocol",
+    "title": "Custom Checks",
+    "section": "The Check Protocol",
+    "text": "The Check Protocol\nAll checks must implement the Check protocol:\nfrom typing import Protocol, Any\nfrom pathlib import Path\nfrom pycmdcheck.results import CheckResult\n\nclass Check(Protocol):\n    name: str\n    description: str\n\n    def run(self, package_path: Path, config: dict[str, Any]) -&gt; CheckResult:\n        ..."
+  },
+  {
+    "objectID": "custom-checks.html#using-basecheck-recommended",
+    "href": "custom-checks.html#using-basecheck-recommended",
+    "title": "Custom Checks",
+    "section": "Using BaseCheck (Recommended)",
+    "text": "Using BaseCheck (Recommended)\nThe easiest way to create a custom check is to inherit from BaseCheck:\nfrom pathlib import Path\nfrom typing import Any\n\nfrom pycmdcheck.checks.base import BaseCheck\nfrom pycmdcheck.results import CheckResult, CheckStatus\n\n\nclass SecurityCheck(BaseCheck):\n    \"\"\"Check for common security issues.\"\"\"\n\n    name = \"security\"\n    description = \"Check for common security issues\"\n\n    def run(self, package_path: Path, config: dict[str, Any]) -&gt; CheckResult:\n        details: list[str] = []\n        issues: list[str] = []\n\n        # Check for .env files that shouldn't be committed\n        env_files = list(package_path.glob(\"**/.env\"))\n        if env_files:\n            issues.append(f\"Found {len(env_files)} .env file(s)\")\n\n        # Check for hardcoded secrets (simplified example)\n        for py_file in package_path.rglob(\"*.py\"):\n            content = py_file.read_text()\n            if \"password=\" in content.lower() or \"api_key=\" in content.lower():\n                issues.append(f\"Potential hardcoded secret in {py_file.name}\")\n\n        # Return result\n        if issues:\n            return CheckResult(\n                name=self.name,\n                status=CheckStatus.WARNING,\n                message=f\"Found {len(issues)} security issue(s)\",\n                details=issues,\n            )\n\n        details.append(\"No security issues found\")\n        return CheckResult(\n            name=self.name,\n            status=CheckStatus.OK,\n            message=\"Security check passed\",\n            details=details,\n        )"
+  },
+  {
+    "objectID": "custom-checks.html#checkresult",
+    "href": "custom-checks.html#checkresult",
+    "title": "Custom Checks",
+    "section": "CheckResult",
+    "text": "CheckResult\nThe CheckResult dataclass is used to return check results:\nfrom pycmdcheck.results import CheckResult, CheckStatus\n\nresult = CheckResult(\n    name=\"my_check\",           # Check name\n    status=CheckStatus.OK,      # Status enum\n    message=\"Check passed\",     # Main message\n    details=[\"Detail 1\"],       # Optional list of details\n)\n\nCheckStatus Values\n\n\n\n\n\n\n\nStatus\nWhen to Use\n\n\n\n\nCheckStatus.OK\nCheck passed successfully\n\n\nCheckStatus.NOTE\nInformational message, not a problem\n\n\nCheckStatus.WARNING\nPotential issue, should be reviewed\n\n\nCheckStatus.ERROR\nCheck failed\n\n\nCheckStatus.SKIPPED\nCheck couldn’t run (e.g., tool not installed)"
+  },
+  {
+    "objectID": "custom-checks.html#registering-your-check",
+    "href": "custom-checks.html#registering-your-check",
+    "title": "Custom Checks",
+    "section": "Registering Your Check",
+    "text": "Registering Your Check\nRegister your check using Python entry points in your pyproject.toml:\n[project.entry-points.\"pycmdcheck.checks\"]\nsecurity = \"my_package.checks:SecurityCheck\"\nThe format is:\ncheck_name = \"module.path:ClassName\""
+  },
+  {
+    "objectID": "custom-checks.html#using-configuration",
+    "href": "custom-checks.html#using-configuration",
+    "title": "Custom Checks",
+    "section": "Using Configuration",
+    "text": "Using Configuration\nChecks receive their configuration via the config parameter:\ndef run(self, package_path: Path, config: dict[str, Any]) -&gt; CheckResult:\n    # Get configuration options\n    strict = config.get(\"strict\", False)\n    patterns = config.get(\"patterns\", [])\n\n    # Use in your check logic\n    if strict:\n        # More rigorous checking\n        ...\nUsers configure your check in their pyproject.toml:\n[tool.pycmdcheck.checks]\nsecurity = { enabled = true, strict = true, patterns = [\"*.key\", \"*.pem\"] }"
+  },
+  {
+    "objectID": "custom-checks.html#complete-example",
+    "href": "custom-checks.html#complete-example",
+    "title": "Custom Checks",
+    "section": "Complete Example",
+    "text": "Complete Example\nHere’s a complete example of a custom check that validates copyright headers:\n\ncheck_copyright.py\n\"\"\"Custom check for copyright headers.\"\"\"\n\nfrom pathlib import Path\nfrom typing import Any\n\nfrom pycmdcheck.checks.base import BaseCheck\nfrom pycmdcheck.results import CheckResult, CheckStatus\n\n\nclass CopyrightCheck(BaseCheck):\n    \"\"\"Check that all Python files have copyright headers.\"\"\"\n\n    name = \"copyright\"\n    description = \"Check for copyright headers in Python files\"\n\n    def run(self, package_path: Path, config: dict[str, Any]) -&gt; CheckResult:\n        # Get configuration\n        required_text = config.get(\"text\", \"Copyright\")\n        exclude_patterns = config.get(\"exclude\", [\"test_*.py\", \"*_test.py\"])\n\n        # Find Python files\n        py_files = list(package_path.rglob(\"*.py\"))\n\n        # Filter excluded files\n        def is_excluded(path: Path) -&gt; bool:\n            return any(path.match(pat) for pat in exclude_patterns)\n\n        py_files = [f for f in py_files if not is_excluded(f)]\n\n        if not py_files:\n            return CheckResult(\n                name=self.name,\n                status=CheckStatus.SKIPPED,\n                message=\"No Python files to check\",\n            )\n\n        # Check each file\n        missing: list[str] = []\n        for py_file in py_files:\n            content = py_file.read_text()\n            # Check first 10 lines for copyright\n            first_lines = \"\\n\".join(content.split(\"\\n\")[:10])\n            if required_text not in first_lines:\n                rel_path = py_file.relative_to(package_path)\n                missing.append(str(rel_path))\n\n        # Return result\n        if missing:\n            return CheckResult(\n                name=self.name,\n                status=CheckStatus.WARNING,\n                message=f\"{len(missing)} file(s) missing copyright header\",\n                details=missing[:10],  # Limit details\n            )\n\n        return CheckResult(\n            name=self.name,\n            status=CheckStatus.OK,\n            message=f\"All {len(py_files)} files have copyright headers\",\n        )\n\n\npyproject.toml (in your package)\n[project.entry-points.\"pycmdcheck.checks\"]\ncopyright = \"my_package.checks.check_copyright:CopyrightCheck\"\n\n\nUsage in target project\n[tool.pycmdcheck.checks]\ncopyright = { enabled = true, text = \"Copyright 2024 My Company\" }"
+  },
+  {
+    "objectID": "custom-checks.html#testing-your-check",
+    "href": "custom-checks.html#testing-your-check",
+    "title": "Custom Checks",
+    "section": "Testing Your Check",
+    "text": "Testing Your Check\nTest your check by instantiating it and calling run():\nimport tempfile\nfrom pathlib import Path\n\nfrom my_package.checks import CopyrightCheck\n\n\ndef test_copyright_check_passes():\n    with tempfile.TemporaryDirectory() as tmpdir:\n        pkg = Path(tmpdir)\n\n        # Create a file with copyright\n        (pkg / \"module.py\").write_text('\"\"\"Copyright 2024\"\"\"\\n\\ndef foo(): pass')\n\n        check = CopyrightCheck()\n        result = check.run(pkg, {\"text\": \"Copyright\"})\n\n        assert result.status.value == \"ok\"\n\n\ndef test_copyright_check_warns():\n    with tempfile.TemporaryDirectory() as tmpdir:\n        pkg = Path(tmpdir)\n\n        # Create a file without copyright\n        (pkg / \"module.py\").write_text(\"def foo(): pass\")\n\n        check = CopyrightCheck()\n        result = check.run(pkg, {\"text\": \"Copyright\"})\n\n        assert result.status.value == \"warning\""
+  },
+  {
+    "objectID": "custom-checks.html#best-practices",
+    "href": "custom-checks.html#best-practices",
+    "title": "Custom Checks",
+    "section": "Best Practices",
+    "text": "Best Practices\n\nUse descriptive names: The name attribute should be short and descriptive\nProvide helpful messages: The message should explain what happened\nInclude details: Use the details list for specific file names or issues\nHandle errors gracefully: Return SKIPPED if tools aren’t available\nRespect configuration: Make your check configurable via the config dict\nTest thoroughly: Write tests for all status outcomes"
+  },
+  {
+    "objectID": "configuration.html",
+    "href": "configuration.html",
+    "title": "Configuration",
+    "section": "",
+    "text": "pycmdcheck is configured via the [tool.pycmdcheck] section in your pyproject.toml."
+  },
+  {
+    "objectID": "configuration.html#basic-configuration",
+    "href": "configuration.html#basic-configuration",
+    "title": "Configuration",
+    "section": "Basic Configuration",
+    "text": "Basic Configuration\n[tool.pycmdcheck]\n# Exit with non-zero code on these statuses\nfail_on = [\"error\"]\n\n[tool.pycmdcheck.checks]\n# Enable/disable checks\nmetadata = true\nstructure = true\ntests = true\nlinting = true\ntyping = true\nimports = true\nlicense = true\ndocs = true"
+  },
+  {
+    "objectID": "configuration.html#global-options",
+    "href": "configuration.html#global-options",
+    "title": "Configuration",
+    "section": "Global Options",
+    "text": "Global Options\n\nfail_on\nList of statuses that should cause a non-zero exit code.\n[tool.pycmdcheck]\n# Default: only errors\nfail_on = [\"error\"]\n\n# Strict: fail on warnings too\nfail_on = [\"error\", \"warning\"]\n\n# Very strict: fail on any issue\nfail_on = [\"error\", \"warning\", \"note\"]"
+  },
+  {
+    "objectID": "configuration.html#check-configuration",
+    "href": "configuration.html#check-configuration",
+    "title": "Configuration",
+    "section": "Check Configuration",
+    "text": "Check Configuration\nChecks can be configured in two ways:\n\nBoolean (Simple)\n[tool.pycmdcheck.checks]\nmetadata = true   # Enable\nlinting = false   # Disable\n\n\nDictionary (With Options)\n[tool.pycmdcheck.checks]\ntests = { enabled = true, runner = \"pytest\" }\nlinting = { enabled = true, tool = \"ruff\" }"
+  },
+  {
+    "objectID": "configuration.html#per-check-options",
+    "href": "configuration.html#per-check-options",
+    "title": "Configuration",
+    "section": "Per-Check Options",
+    "text": "Per-Check Options\n\nmetadata\nValidates pyproject.toml has required and recommended fields.\n[tool.pycmdcheck.checks]\nmetadata = true  # No additional options\nRequired fields: name, version Recommended fields: description, readme, license, requires-python\n\n\nstructure\nValidates package directory structure.\n[tool.pycmdcheck.checks]\nstructure = true  # No additional options\nSupports both src layout (src/package/) and flat layout (package/).\n\n\ntests\nRuns package tests.\n[tool.pycmdcheck.checks]\ntests = { enabled = true, runner = \"pytest\" }\nOptions:\n\n\n\n\n\n\n\n\n\nOption\nValues\nDefault\nDescription\n\n\n\n\nrunner\n\"pytest\", \"unittest\"\n\"pytest\"\nTest runner to use\n\n\nargs\nlist of strings\n[]\nAdditional arguments\n\n\n\nExamples:\n# Use pytest (default)\ntests = { enabled = true, runner = \"pytest\" }\n\n# Use unittest\ntests = { enabled = true, runner = \"unittest\" }\n\n# With custom args\ntests = { enabled = true, runner = \"pytest\", args = [\"-x\", \"--tb=short\"] }\n\n\nlinting\nRuns code linting.\n[tool.pycmdcheck.checks]\nlinting = { enabled = true, tool = \"ruff\" }\nOptions:\n\n\n\nOption\nValues\nDefault\nDescription\n\n\n\n\ntool\n\"ruff\", \"flake8\", \"pylint\"\n\"ruff\"\nLinting tool\n\n\nargs\nlist of strings\n[]\nAdditional arguments\n\n\n\nExamples:\n# Use ruff (default, recommended)\nlinting = { enabled = true, tool = \"ruff\" }\n\n# Use flake8\nlinting = { enabled = true, tool = \"flake8\" }\n\n# Use pylint\nlinting = { enabled = true, tool = \"pylint\" }\n\n# With custom args\nlinting = { enabled = true, tool = \"ruff\", args = [\"--select\", \"E,F,W\"] }\n\n\ntyping\nRuns type checking.\n[tool.pycmdcheck.checks]\ntyping = { enabled = true, tool = \"mypy\" }\nOptions:\n\n\n\nOption\nValues\nDefault\nDescription\n\n\n\n\ntool\n\"mypy\", \"pyright\"\n\"mypy\"\nType checker\n\n\nstrict\nboolean\nfalse\nEnable strict mode\n\n\nargs\nlist of strings\n[]\nAdditional arguments\n\n\n\nExamples:\n# Use mypy (default)\ntyping = { enabled = true, tool = \"mypy\" }\n\n# Use pyright\ntyping = { enabled = true, tool = \"pyright\" }\n\n# Strict mode\ntyping = { enabled = true, tool = \"mypy\", strict = true }\n\n# With custom args\ntyping = { enabled = true, tool = \"mypy\", args = [\"--ignore-missing-imports\"] }\n\n\nimports\nValidates all imports can be resolved.\n[tool.pycmdcheck.checks]\nimports = true  # No additional options\n\n\nlicense\nChecks for license file.\n[tool.pycmdcheck.checks]\nlicense = true  # No additional options\nRecognizes: LICENSE, LICENSE.txt, LICENSE.md, LICENCE, COPYING\n\n\ndocs\nChecks for documentation.\n[tool.pycmdcheck.checks]\ndocs = { enabled = true, require_readme = true }\nOptions:\n\n\n\nOption\nValues\nDefault\nDescription\n\n\n\n\nrequire_readme\nboolean\ntrue\nRequire README file\n\n\ncheck_docstrings\nboolean\nfalse\nCheck for docstrings\n\n\n\nExamples:\n# Basic (require README)\ndocs = true\n\n# With docstring checking\ndocs = { enabled = true, require_readme = true, check_docstrings = true }"
+  },
+  {
+    "objectID": "configuration.html#complete-example",
+    "href": "configuration.html#complete-example",
+    "title": "Configuration",
+    "section": "Complete Example",
+    "text": "Complete Example\n[tool.pycmdcheck]\nfail_on = [\"error\", \"warning\"]\n\n[tool.pycmdcheck.checks]\nmetadata = true\nstructure = true\ntests = { enabled = true, runner = \"pytest\" }\nlinting = { enabled = true, tool = \"ruff\", args = [\"--select\", \"E,F,W,I\"] }\ntyping = { enabled = true, tool = \"mypy\", strict = true }\nimports = true\nlicense = true\ndocs = { enabled = true, require_readme = true, check_docstrings = false }"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "pycmdcheck",
+    "section": "",
+    "text": "pycmdcheck is a comprehensive quality checker for Python packages, inspired by R’s R CMD check. It validates your package structure, metadata, tests, linting, type checking, and more—all from a single command."
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "pycmdcheck",
+    "section": "",
+    "text": "pycmdcheck is a comprehensive quality checker for Python packages, inspired by R’s R CMD check. It validates your package structure, metadata, tests, linting, type checking, and more—all from a single command."
+  },
+  {
+    "objectID": "index.html#features",
+    "href": "index.html#features",
+    "title": "pycmdcheck",
+    "section": "Features",
+    "text": "Features\n\nComprehensive Checks: Validates metadata, structure, tests, linting, typing, imports, license, and documentation\nConfigurable: Enable/disable checks and configure tools via pyproject.toml\nMultiple Backends: Supports ruff/flake8/pylint for linting, mypy/pyright for type checking\nExtensible: Create custom checks via entry points\nBeautiful Output: Rich terminal output with status indicators and details\nParallel Execution: Runs checks in parallel for speed"
+  },
+  {
+    "objectID": "index.html#quick-example",
+    "href": "index.html#quick-example",
+    "title": "pycmdcheck",
+    "section": "Quick Example",
+    "text": "Quick Example\n\nCommand Line\n# Check current directory\npycmdcheck\n\n# Check specific directory\npycmdcheck /path/to/package\n\n# Run only specific checks\npycmdcheck -c tests -c linting\n\n# List available checks\npycmdcheck --list\n\n\nPython API\nfrom pycmdcheck import check\n\n# Check a package\nreport = check(\".\")\n\n# Check results\nif report.passed:\n    print(\"All checks passed!\")\nelse:\n    for result in report.results:\n        print(f\"{result.status}: {result.name} - {result.message}\")"
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "pycmdcheck",
+    "section": "Installation",
+    "text": "Installation\npip install pycmdcheck\nOr with uv:\nuv add pycmdcheck"
+  },
+  {
+    "objectID": "index.html#next-steps",
+    "href": "index.html#next-steps",
+    "title": "pycmdcheck",
+    "section": "Next Steps",
+    "text": "Next Steps\n\nGetting Started - Installation and first steps\nCLI Reference - Command-line usage\nConfiguration - Configure checks in pyproject.toml\nCustom Checks - Create your own checks\nAPI Reference - Full API documentation"
+  },
+  {
+    "objectID": "changelog.html",
+    "href": "changelog.html",
+    "title": "Changelog",
+    "section": "",
+    "text": "All notable changes to pycmdcheck will be documented in this file.\nThe format is based on Keep a Changelog, and this project adheres to Semantic Versioning.\n\n\n\n\n\n\n\n\nInitial release of pycmdcheck\nCore check() function for programmatic package checking\nCLI with pycmdcheck command\n8 built-in checks:\n\nmetadata - Validates pyproject.toml\nstructure - Validates package structure\ntests - Runs pytest/unittest\nlinting - Runs ruff/flake8/pylint\ntyping - Runs mypy/pyright\nimports - Validates imports\nlicense - Checks for LICENSE file\ndocs - Checks for README\n\nConfiguration via [tool.pycmdcheck] in pyproject.toml\nPlugin system via entry points for custom checks\nParallel check execution\nRich terminal output with colors and tables\nJSON output format for CI integration\nCheckResult, CheckStatus, and Report classes\nBaseCheck abstract class for custom check development"
+  },
+  {
+    "objectID": "changelog.html#section",
+    "href": "changelog.html#section",
+    "title": "Changelog",
+    "section": "",
+    "text": "Initial release of pycmdcheck\nCore check() function for programmatic package checking\nCLI with pycmdcheck command\n8 built-in checks:\n\nmetadata - Validates pyproject.toml\nstructure - Validates package structure\ntests - Runs pytest/unittest\nlinting - Runs ruff/flake8/pylint\ntyping - Runs mypy/pyright\nimports - Validates imports\nlicense - Checks for LICENSE file\ndocs - Checks for README\n\nConfiguration via [tool.pycmdcheck] in pyproject.toml\nPlugin system via entry points for custom checks\nParallel check execution\nRich terminal output with colors and tables\nJSON output format for CI integration\nCheckResult, CheckStatus, and Report classes\nBaseCheck abstract class for custom check development"
+  },
+  {
+    "objectID": "reference/checks.imports.ImportsCheck.html",
+    "href": "reference/checks.imports.ImportsCheck.html",
+    "title": "checks.imports.ImportsCheck",
+    "section": "",
+    "text": "checks.imports.ImportsCheck()\nCheck that all imports in the package can be resolved.\nScans all Python files in the package and attempts to resolve each import statement. Reports any imports that cannot be found, which may indicate missing dependencies.\n\n\n\nname : \n\nThe check identifier (“imports”).\n\ndescription : \n\nHuman-readable description of this check.\n\n\n\n\n\nThis check excludes standard library modules and local package imports from validation. It only flags third-party imports that cannot be resolved in the current environment.\n\n\n\nRun the imports check:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = ImportsCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'imports'\nThe check reports unresolvable imports:\n&gt;&gt;&gt; # If a file imports 'nonexistent_package'\n&gt;&gt;&gt; # result.status == CheckStatus.WARNING\n&gt;&gt;&gt; # \"Cannot import 'nonexistent_package'\" in result.details\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nCheck imports in all Python files.\n\n\n\n\n\nchecks.imports.ImportsCheck.run(package_path, config)\nCheck imports in all Python files.\nParses each Python file to extract import statements, then attempts to import each module to verify it exists.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all imports can be resolved\n\n\n : CheckResult\n\n\nNOTE status if no Python files found\n\n\n : CheckResult\n\n\nWARNING status if some imports cannot be resolved\n\n\n : CheckResult\n\n\nERROR status if Python files have syntax errors"
+  },
+  {
+    "objectID": "reference/checks.imports.ImportsCheck.html#attributes",
+    "href": "reference/checks.imports.ImportsCheck.html#attributes",
+    "title": "checks.imports.ImportsCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“imports”).\n\ndescription : \n\nHuman-readable description of this check."
+  },
+  {
+    "objectID": "reference/checks.imports.ImportsCheck.html#note",
+    "href": "reference/checks.imports.ImportsCheck.html#note",
+    "title": "checks.imports.ImportsCheck",
+    "section": "",
+    "text": "This check excludes standard library modules and local package imports from validation. It only flags third-party imports that cannot be resolved in the current environment."
+  },
+  {
+    "objectID": "reference/checks.imports.ImportsCheck.html#examples",
+    "href": "reference/checks.imports.ImportsCheck.html#examples",
+    "title": "checks.imports.ImportsCheck",
+    "section": "",
+    "text": "Run the imports check:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = ImportsCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'imports'\nThe check reports unresolvable imports:\n&gt;&gt;&gt; # If a file imports 'nonexistent_package'\n&gt;&gt;&gt; # result.status == CheckStatus.WARNING\n&gt;&gt;&gt; # \"Cannot import 'nonexistent_package'\" in result.details"
+  },
+  {
+    "objectID": "reference/checks.imports.ImportsCheck.html#methods",
+    "href": "reference/checks.imports.ImportsCheck.html#methods",
+    "title": "checks.imports.ImportsCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nCheck imports in all Python files.\n\n\n\n\n\nchecks.imports.ImportsCheck.run(package_path, config)\nCheck imports in all Python files.\nParses each Python file to extract import statements, then attempts to import each module to verify it exists.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all imports can be resolved\n\n\n : CheckResult\n\n\nNOTE status if no Python files found\n\n\n : CheckResult\n\n\nWARNING status if some imports cannot be resolved\n\n\n : CheckResult\n\n\nERROR status if Python files have syntax errors"
+  },
+  {
+    "objectID": "reference/runner.run_checks.html",
+    "href": "reference/runner.run_checks.html",
+    "title": "runner.run_checks",
+    "section": "",
+    "text": "runner.run_checks(\n    package_path,\n    checks=None,\n    skip=None,\n    config=None,\n    parallel=True,\n)\nRun checks on a package.\nThis is the core function that orchestrates check discovery and execution. It loads configuration, discovers available checks via entry points, and runs them either in parallel or sequentially.\n\n\n\npackage_path : str | Path\n\nPath to the package directory to check. Can be a string or Path object. Will be resolved to an absolute path.\n\nchecks : list[str] | None = None\n\nList of specific check names to run. If None, runs all checks that are enabled in the configuration. Available built-in checks: metadata, structure, tests, linting, typing, imports, license, docs.\n\nskip : list[str] | None = None\n\nList of check names to skip, even if they would otherwise run.\n\nconfig : dict[str, Any] | None = None\n\nPre-loaded configuration dictionary. If None, configuration is loaded from the package’s pyproject.toml file.\n\nparallel : bool = True\n\nWhether to run checks in parallel using threads. Defaults to True. Set to False for deterministic ordering or debugging.\n\n\n\n\n\n\n : Report\n\nA Report object containing all check results. The report includes\n\n : Report\n\nthe package path and a list of CheckResult objects.\n\n\n\n\n\nRun all enabled checks:\n&gt;&gt;&gt; report = run_checks(\"/path/to/package\")\n&gt;&gt;&gt; report.passed\nTrue\nRun specific checks only:\n&gt;&gt;&gt; report = run_checks(\".\", checks=[\"metadata\", \"tests\"])\n&gt;&gt;&gt; len(report.results)\n2\nRun sequentially for debugging:\n&gt;&gt;&gt; report = run_checks(\".\", parallel=False)"
+  },
+  {
+    "objectID": "reference/runner.run_checks.html#parameters",
+    "href": "reference/runner.run_checks.html#parameters",
+    "title": "runner.run_checks",
+    "section": "",
+    "text": "package_path : str | Path\n\nPath to the package directory to check. Can be a string or Path object. Will be resolved to an absolute path.\n\nchecks : list[str] | None = None\n\nList of specific check names to run. If None, runs all checks that are enabled in the configuration. Available built-in checks: metadata, structure, tests, linting, typing, imports, license, docs.\n\nskip : list[str] | None = None\n\nList of check names to skip, even if they would otherwise run.\n\nconfig : dict[str, Any] | None = None\n\nPre-loaded configuration dictionary. If None, configuration is loaded from the package’s pyproject.toml file.\n\nparallel : bool = True\n\nWhether to run checks in parallel using threads. Defaults to True. Set to False for deterministic ordering or debugging."
+  },
+  {
+    "objectID": "reference/runner.run_checks.html#returns",
+    "href": "reference/runner.run_checks.html#returns",
+    "title": "runner.run_checks",
+    "section": "",
+    "text": ": Report\n\nA Report object containing all check results. The report includes\n\n : Report\n\nthe package path and a list of CheckResult objects."
+  },
+  {
+    "objectID": "reference/runner.run_checks.html#examples",
+    "href": "reference/runner.run_checks.html#examples",
+    "title": "runner.run_checks",
+    "section": "",
+    "text": "Run all enabled checks:\n&gt;&gt;&gt; report = run_checks(\"/path/to/package\")\n&gt;&gt;&gt; report.passed\nTrue\nRun specific checks only:\n&gt;&gt;&gt; report = run_checks(\".\", checks=[\"metadata\", \"tests\"])\n&gt;&gt;&gt; len(report.results)\n2\nRun sequentially for debugging:\n&gt;&gt;&gt; report = run_checks(\".\", parallel=False)"
+  },
+  {
+    "objectID": "reference/config.is_check_enabled.html",
+    "href": "reference/config.is_check_enabled.html",
+    "title": "config.is_check_enabled",
+    "section": "",
+    "text": "config.is_check_enabled(config, check_name)\nCheck if a specific check is enabled.\nConvenience function to determine if a check should run based on the configuration.\n\n\n\nconfig : dict[str, Any]\n\nFull pycmdcheck configuration dictionary.\n\ncheck_name : str\n\nName of the check to query.\n\n\n\n\n\n\n : bool\n\nTrue if the check is enabled, False otherwise.\n\n\n\n\n\n&gt;&gt;&gt; config = {\"checks\": {\"metadata\": True, \"linting\": False}}\n&gt;&gt;&gt; is_check_enabled(config, \"metadata\")\nTrue\n&gt;&gt;&gt; is_check_enabled(config, \"linting\")\nFalse\n&gt;&gt;&gt; is_check_enabled(config, \"unknown\")  # Defaults to enabled\nTrue"
+  },
+  {
+    "objectID": "reference/config.is_check_enabled.html#parameters",
+    "href": "reference/config.is_check_enabled.html#parameters",
+    "title": "config.is_check_enabled",
+    "section": "",
+    "text": "config : dict[str, Any]\n\nFull pycmdcheck configuration dictionary.\n\ncheck_name : str\n\nName of the check to query."
+  },
+  {
+    "objectID": "reference/config.is_check_enabled.html#returns",
+    "href": "reference/config.is_check_enabled.html#returns",
+    "title": "config.is_check_enabled",
+    "section": "",
+    "text": ": bool\n\nTrue if the check is enabled, False otherwise."
+  },
+  {
+    "objectID": "reference/config.is_check_enabled.html#examples",
+    "href": "reference/config.is_check_enabled.html#examples",
+    "title": "config.is_check_enabled",
+    "section": "",
+    "text": "&gt;&gt;&gt; config = {\"checks\": {\"metadata\": True, \"linting\": False}}\n&gt;&gt;&gt; is_check_enabled(config, \"metadata\")\nTrue\n&gt;&gt;&gt; is_check_enabled(config, \"linting\")\nFalse\n&gt;&gt;&gt; is_check_enabled(config, \"unknown\")  # Defaults to enabled\nTrue"
+  },
+  {
+    "objectID": "reference/CheckStatus.html",
+    "href": "reference/CheckStatus.html",
+    "title": "CheckStatus",
+    "section": "",
+    "text": "CheckStatus()\nStatus of a check result.\nEach check returns one of these statuses to indicate whether the check passed, failed, or encountered issues.\n\n\n\nOK : \n\nCheck passed successfully.\n\nNOTE : \n\nInformational message, not a problem.\n\nWARNING : \n\nPotential issue that should be reviewed.\n\nERROR : \n\nCheck failed.\n\nSKIPPED : \n\nCheck was skipped (e.g., required tool not installed).\n\n\n\n\n\n&gt;&gt;&gt; status = CheckStatus.OK\n&gt;&gt;&gt; status.symbol\n'✓'\n&gt;&gt;&gt; status.color\n'green'\n&gt;&gt;&gt; str(status)\n'ok'"
+  },
+  {
+    "objectID": "reference/CheckStatus.html#attributes",
+    "href": "reference/CheckStatus.html#attributes",
+    "title": "CheckStatus",
+    "section": "",
+    "text": "OK : \n\nCheck passed successfully.\n\nNOTE : \n\nInformational message, not a problem.\n\nWARNING : \n\nPotential issue that should be reviewed.\n\nERROR : \n\nCheck failed.\n\nSKIPPED : \n\nCheck was skipped (e.g., required tool not installed)."
+  },
+  {
+    "objectID": "reference/CheckStatus.html#examples",
+    "href": "reference/CheckStatus.html#examples",
+    "title": "CheckStatus",
+    "section": "",
+    "text": "&gt;&gt;&gt; status = CheckStatus.OK\n&gt;&gt;&gt; status.symbol\n'✓'\n&gt;&gt;&gt; status.color\n'green'\n&gt;&gt;&gt; str(status)\n'ok'"
+  },
+  {
+    "objectID": "reference/discovery.list_available_checks.html",
+    "href": "reference/discovery.list_available_checks.html",
+    "title": "discovery.list_available_checks",
+    "section": "",
+    "text": "discovery.list_available_checks()\nList all available checks with their descriptions.\nDiscovers all registered checks and returns their names and descriptions in a format suitable for display (e.g., in CLI help). Results are sorted alphabetically by check name.\n\n\n\n : list[tuple[str, str]]\n\nA list of (name, description) tuples, sorted alphabetically\n\n : list[tuple[str, str]]\n\nby name. Each tuple contains:\n\n : list[tuple[str, str]]\n\n\nname: The check’s unique identifier (str)\n\n\n : list[tuple[str, str]]\n\n\ndescription: Human-readable description of what the check does (str)\n\n\n : list[tuple[str, str]]\n\nIf a check’s description cannot be retrieved, “No description\n\n : list[tuple[str, str]]\n\navailable” is used as a fallback.\n\n\n\n\n\nList all checks for display:\n&gt;&gt;&gt; checks = list_available_checks()\n&gt;&gt;&gt; len(checks) &gt; 0\nTrue\n&gt;&gt;&gt; name, description = checks[0]\n&gt;&gt;&gt; isinstance(name, str) and isinstance(description, str)\nTrue\nDisplay in CLI:\n&gt;&gt;&gt; for name, desc in list_available_checks():\n...     print(f\"  {name}: {desc}\")\n  docs: Check documentation presence\n  imports: Check that package imports work\n  ..."
+  },
+  {
+    "objectID": "reference/discovery.list_available_checks.html#returns",
+    "href": "reference/discovery.list_available_checks.html#returns",
+    "title": "discovery.list_available_checks",
+    "section": "",
+    "text": ": list[tuple[str, str]]\n\nA list of (name, description) tuples, sorted alphabetically\n\n : list[tuple[str, str]]\n\nby name. Each tuple contains:\n\n : list[tuple[str, str]]\n\n\nname: The check’s unique identifier (str)\n\n\n : list[tuple[str, str]]\n\n\ndescription: Human-readable description of what the check does (str)\n\n\n : list[tuple[str, str]]\n\nIf a check’s description cannot be retrieved, “No description\n\n : list[tuple[str, str]]\n\navailable” is used as a fallback."
+  },
+  {
+    "objectID": "reference/discovery.list_available_checks.html#examples",
+    "href": "reference/discovery.list_available_checks.html#examples",
+    "title": "discovery.list_available_checks",
+    "section": "",
+    "text": "List all checks for display:\n&gt;&gt;&gt; checks = list_available_checks()\n&gt;&gt;&gt; len(checks) &gt; 0\nTrue\n&gt;&gt;&gt; name, description = checks[0]\n&gt;&gt;&gt; isinstance(name, str) and isinstance(description, str)\nTrue\nDisplay in CLI:\n&gt;&gt;&gt; for name, desc in list_available_checks():\n...     print(f\"  {name}: {desc}\")\n  docs: Check documentation presence\n  imports: Check that package imports work\n  ..."
+  },
+  {
+    "objectID": "reference/checks.license.LicenseCheck.html",
+    "href": "reference/checks.license.LicenseCheck.html",
+    "title": "checks.license.LicenseCheck",
+    "section": "",
+    "text": "checks.license.LicenseCheck()\nCheck that the package has a license file.\nLooks for common license file names (LICENSE, COPYING, etc.) and attempts to identify the license type (MIT, Apache, GPL, etc.).\n\n\n\nname : \n\nThe check identifier (“license”).\n\ndescription : \n\nHuman-readable description of this check.\n\nLICENSE_FILENAMES : \n\nList of recognized license file names.\n\nKNOWN_LICENSES : \n\nDictionary mapping license identifiers to text markers used for identification.\n\n\n\n\n\nRun the license check:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = LicenseCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'license'\nThe check identifies common licenses:\n&gt;&gt;&gt; # For a package with MIT license\n&gt;&gt;&gt; # result.status == CheckStatus.OK\n&gt;&gt;&gt; # \"License type: MIT\" in result.details\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nCheck for license file presence and validity.\n\n\n\n\n\nchecks.license.LicenseCheck.run(package_path, config)\nCheck for license file presence and validity.\nSearches for a license file using common naming conventions, verifies it’s not empty, and attempts to identify the license type.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if a valid license file is found\n\n\n : CheckResult\n\n\nWARNING status if no license file found or file is empty"
+  },
+  {
+    "objectID": "reference/checks.license.LicenseCheck.html#attributes",
+    "href": "reference/checks.license.LicenseCheck.html#attributes",
+    "title": "checks.license.LicenseCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“license”).\n\ndescription : \n\nHuman-readable description of this check.\n\nLICENSE_FILENAMES : \n\nList of recognized license file names.\n\nKNOWN_LICENSES : \n\nDictionary mapping license identifiers to text markers used for identification."
+  },
+  {
+    "objectID": "reference/checks.license.LicenseCheck.html#examples",
+    "href": "reference/checks.license.LicenseCheck.html#examples",
+    "title": "checks.license.LicenseCheck",
+    "section": "",
+    "text": "Run the license check:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = LicenseCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'license'\nThe check identifies common licenses:\n&gt;&gt;&gt; # For a package with MIT license\n&gt;&gt;&gt; # result.status == CheckStatus.OK\n&gt;&gt;&gt; # \"License type: MIT\" in result.details"
+  },
+  {
+    "objectID": "reference/checks.license.LicenseCheck.html#methods",
+    "href": "reference/checks.license.LicenseCheck.html#methods",
+    "title": "checks.license.LicenseCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nCheck for license file presence and validity.\n\n\n\n\n\nchecks.license.LicenseCheck.run(package_path, config)\nCheck for license file presence and validity.\nSearches for a license file using common naming conventions, verifies it’s not empty, and attempts to identify the license type.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check. Currently no check-specific options are used.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if a valid license file is found\n\n\n : CheckResult\n\n\nWARNING status if no license file found or file is empty"
+  },
+  {
+    "objectID": "reference/checks.docs.DocsCheck.html",
+    "href": "reference/checks.docs.DocsCheck.html",
+    "title": "checks.docs.DocsCheck",
+    "section": "",
+    "text": "checks.docs.DocsCheck()\nCheck for documentation presence and quality.\nVerifies that the package has a README file and optionally checks that public modules, classes, and functions have docstrings.\n\n\n\nname : \n\nThe check identifier (“docs”).\n\ndescription : \n\nHuman-readable description of this check.\n\nREADME_FILENAMES : \n\nList of recognized README file names.\n\n\n\n\n\nrequire_readme (bool): Whether README is required. Defaults to True. check_docstrings (bool): Whether to check for docstrings in code. Defaults to False.\n\n\n\nRun the docs check with defaults:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = DocsCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'docs'\nEnable docstring checking:\n&gt;&gt;&gt; config = {\"enabled\": True, \"check_docstrings\": True}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nMake README optional:\n&gt;&gt;&gt; config = {\"enabled\": True, \"require_readme\": False}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nCheck documentation presence and quality.\n\n\n\n\n\nchecks.docs.DocsCheck.run(package_path, config)\nCheck documentation presence and quality.\nLooks for a README file and optionally scans code for missing docstrings on public items.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - require_readme (bool): Require README (default: True) - check_docstrings (bool): Check code docstrings (default: False)\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all documentation requirements met\n\n\n : CheckResult\n\n\nNOTE status if minor improvements suggested\n\n\n : CheckResult\n\n\nWARNING status if README missing (when required)"
+  },
+  {
+    "objectID": "reference/checks.docs.DocsCheck.html#attributes",
+    "href": "reference/checks.docs.DocsCheck.html#attributes",
+    "title": "checks.docs.DocsCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“docs”).\n\ndescription : \n\nHuman-readable description of this check.\n\nREADME_FILENAMES : \n\nList of recognized README file names."
+  },
+  {
+    "objectID": "reference/checks.docs.DocsCheck.html#configuration-options",
+    "href": "reference/checks.docs.DocsCheck.html#configuration-options",
+    "title": "checks.docs.DocsCheck",
+    "section": "",
+    "text": "require_readme (bool): Whether README is required. Defaults to True. check_docstrings (bool): Whether to check for docstrings in code. Defaults to False."
+  },
+  {
+    "objectID": "reference/checks.docs.DocsCheck.html#examples",
+    "href": "reference/checks.docs.DocsCheck.html#examples",
+    "title": "checks.docs.DocsCheck",
+    "section": "",
+    "text": "Run the docs check with defaults:\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = DocsCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'docs'\nEnable docstring checking:\n&gt;&gt;&gt; config = {\"enabled\": True, \"check_docstrings\": True}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nMake README optional:\n&gt;&gt;&gt; config = {\"enabled\": True, \"require_readme\": False}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)"
+  },
+  {
+    "objectID": "reference/checks.docs.DocsCheck.html#methods",
+    "href": "reference/checks.docs.DocsCheck.html#methods",
+    "title": "checks.docs.DocsCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nCheck documentation presence and quality.\n\n\n\n\n\nchecks.docs.DocsCheck.run(package_path, config)\nCheck documentation presence and quality.\nLooks for a README file and optionally scans code for missing docstrings on public items.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - require_readme (bool): Require README (default: True) - check_docstrings (bool): Check code docstrings (default: False)\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all documentation requirements met\n\n\n : CheckResult\n\n\nNOTE status if minor improvements suggested\n\n\n : CheckResult\n\n\nWARNING status if README missing (when required)"
+  },
+  {
+    "objectID": "reference/config.get_check_config.html",
+    "href": "reference/config.get_check_config.html",
+    "title": "config.get_check_config",
+    "section": "",
+    "text": "config.get_check_config(config, check_name)\nGet configuration for a specific check.\nExtracts the configuration for a named check from the full configuration. Handles both boolean shorthand (e.g., metadata = true) and dictionary configuration (e.g., tests = { enabled = true, runner = \"pytest\" }).\n\n\n\nconfig : dict[str, Any]\n\nFull pycmdcheck configuration dictionary, as returned by load_config().\n\ncheck_name : str\n\nName of the check to get configuration for (e.g., “metadata”, “tests”, “linting”).\n\n\n\n\n\n\n : dict[str, Any]\n\nConfiguration dictionary for the check, always containing an\n\n : dict[str, Any]\n\n“enabled” key. Additional keys depend on the check type.\n\n\n\n\n\nBoolean config is converted to dict:\n&gt;&gt;&gt; config = {\"checks\": {\"metadata\": True}}\n&gt;&gt;&gt; get_check_config(config, \"metadata\")\n{'enabled': True}\nDict config is passed through with enabled defaulting to True:\n&gt;&gt;&gt; config = {\"checks\": {\"tests\": {\"runner\": \"pytest\"}}}\n&gt;&gt;&gt; get_check_config(config, \"tests\")\n{'runner': 'pytest', 'enabled': True}\nUnknown checks default to enabled:\n&gt;&gt;&gt; config = {\"checks\": {}}\n&gt;&gt;&gt; get_check_config(config, \"unknown\")\n{'enabled': True}"
+  },
+  {
+    "objectID": "reference/config.get_check_config.html#parameters",
+    "href": "reference/config.get_check_config.html#parameters",
+    "title": "config.get_check_config",
+    "section": "",
+    "text": "config : dict[str, Any]\n\nFull pycmdcheck configuration dictionary, as returned by load_config().\n\ncheck_name : str\n\nName of the check to get configuration for (e.g., “metadata”, “tests”, “linting”)."
+  },
+  {
+    "objectID": "reference/config.get_check_config.html#returns",
+    "href": "reference/config.get_check_config.html#returns",
+    "title": "config.get_check_config",
+    "section": "",
+    "text": ": dict[str, Any]\n\nConfiguration dictionary for the check, always containing an\n\n : dict[str, Any]\n\n“enabled” key. Additional keys depend on the check type."
+  },
+  {
+    "objectID": "reference/config.get_check_config.html#examples",
+    "href": "reference/config.get_check_config.html#examples",
+    "title": "config.get_check_config",
+    "section": "",
+    "text": "Boolean config is converted to dict:\n&gt;&gt;&gt; config = {\"checks\": {\"metadata\": True}}\n&gt;&gt;&gt; get_check_config(config, \"metadata\")\n{'enabled': True}\nDict config is passed through with enabled defaulting to True:\n&gt;&gt;&gt; config = {\"checks\": {\"tests\": {\"runner\": \"pytest\"}}}\n&gt;&gt;&gt; get_check_config(config, \"tests\")\n{'runner': 'pytest', 'enabled': True}\nUnknown checks default to enabled:\n&gt;&gt;&gt; config = {\"checks\": {}}\n&gt;&gt;&gt; get_check_config(config, \"unknown\")\n{'enabled': True}"
+  },
+  {
+    "objectID": "reference/checks.tests.TestsCheck.html",
+    "href": "reference/checks.tests.TestsCheck.html",
+    "title": "checks.tests.TestsCheck",
+    "section": "",
+    "text": "checks.tests.TestsCheck()\nRun package tests and report results.\nExecutes the package’s test suite using the configured test runner (pytest by default) and reports pass/fail status. Supports pytest and unittest runners.\n\n\n\nname : \n\nThe check identifier (“tests”).\n\ndescription : \n\nHuman-readable description of this check.\n\n\n\n\n\nrunner (str): Test runner to use (“pytest” or “unittest”). Defaults to “pytest”. args (list[str]): Additional arguments to pass to the test runner.\n\n\n\nRun tests with default settings (pytest):\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = TestsCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'tests'\nConfigure to use unittest:\n&gt;&gt;&gt; config = {\"enabled\": True, \"runner\": \"unittest\"}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nPass additional pytest arguments:\n&gt;&gt;&gt; config = {\"enabled\": True, \"args\": [\"-x\", \"--cov\"]}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nRun tests and return results.\n\n\n\n\n\nchecks.tests.TestsCheck.run(package_path, config)\nRun tests and return results.\nExecutes the test suite in the package’s tests/ or test/ directory. The test runner is determined by the runner config option.\n\n\n\npackage_path : Path\n\nPath to the package directory containing tests.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - runner (str): “pytest” or “unittest” (default: “pytest”) - args (list[str]): Additional arguments for the runner\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all tests pass\n\n\n : CheckResult\n\n\nWARNING status if no tests found\n\n\n : CheckResult\n\n\nERROR status if tests fail or runner not installed\n\n\n : CheckResult\n\n\nSKIPPED status if the test runner is not installed"
+  },
+  {
+    "objectID": "reference/checks.tests.TestsCheck.html#attributes",
+    "href": "reference/checks.tests.TestsCheck.html#attributes",
+    "title": "checks.tests.TestsCheck",
+    "section": "",
+    "text": "name : \n\nThe check identifier (“tests”).\n\ndescription : \n\nHuman-readable description of this check."
+  },
+  {
+    "objectID": "reference/checks.tests.TestsCheck.html#configuration-options",
+    "href": "reference/checks.tests.TestsCheck.html#configuration-options",
+    "title": "checks.tests.TestsCheck",
+    "section": "",
+    "text": "runner (str): Test runner to use (“pytest” or “unittest”). Defaults to “pytest”. args (list[str]): Additional arguments to pass to the test runner."
+  },
+  {
+    "objectID": "reference/checks.tests.TestsCheck.html#examples",
+    "href": "reference/checks.tests.TestsCheck.html#examples",
+    "title": "checks.tests.TestsCheck",
+    "section": "",
+    "text": "Run tests with default settings (pytest):\n&gt;&gt;&gt; from pathlib import Path\n&gt;&gt;&gt; check = TestsCheck()\n&gt;&gt;&gt; result = check.run(Path(\".\"), {\"enabled\": True})\n&gt;&gt;&gt; result.name\n'tests'\nConfigure to use unittest:\n&gt;&gt;&gt; config = {\"enabled\": True, \"runner\": \"unittest\"}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)\nPass additional pytest arguments:\n&gt;&gt;&gt; config = {\"enabled\": True, \"args\": [\"-x\", \"--cov\"]}\n&gt;&gt;&gt; result = check.run(Path(\".\"), config)"
+  },
+  {
+    "objectID": "reference/checks.tests.TestsCheck.html#methods",
+    "href": "reference/checks.tests.TestsCheck.html#methods",
+    "title": "checks.tests.TestsCheck",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nRun tests and return results.\n\n\n\n\n\nchecks.tests.TestsCheck.run(package_path, config)\nRun tests and return results.\nExecutes the test suite in the package’s tests/ or test/ directory. The test runner is determined by the runner config option.\n\n\n\npackage_path : Path\n\nPath to the package directory containing tests.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary with options: - runner (str): “pytest” or “unittest” (default: “pytest”) - args (list[str]): Additional arguments for the runner\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult with:\n\n : CheckResult\n\n\nOK status if all tests pass\n\n\n : CheckResult\n\n\nWARNING status if no tests found\n\n\n : CheckResult\n\n\nERROR status if tests fail or runner not installed\n\n\n : CheckResult\n\n\nSKIPPED status if the test runner is not installed"
+  },
+  {
+    "objectID": "reference/checks.base.Check.html",
+    "href": "reference/checks.base.Check.html",
+    "title": "checks.base.Check",
+    "section": "",
+    "text": "checks.base.Check()\nProtocol defining the interface for all checks.\nThis protocol defines what a check must implement to be usable by pycmdcheck. Checks can be implemented by either:\n\nInheriting from BaseCheck (recommended for most cases)\nImplementing this Protocol directly (for structural subtyping)\n\n\n\n\nname : str\n\nUnique identifier for the check (e.g., “metadata”, “tests”).\n\ndescription : str\n\nHuman-readable description of what the check does.\n\n\n\n\n\nImplement a check using the protocol directly:\n&gt;&gt;&gt; class MyCheck:\n...     name = \"my_check\"\n...     description = \"My custom check\"\n...\n...     def run(self, package_path, config):\n...         return CheckResult(\n...             name=self.name,\n...             status=CheckStatus.OK,\n...             message=\"Check passed\",\n...         )\n&gt;&gt;&gt; isinstance(MyCheck(), Check)\nTrue\n\n\n\n\n\n\nName\nDescription\n\n\n\n\nrun\nExecute the check and return result.\n\n\n\n\n\nchecks.base.Check.run(package_path, config)\nExecute the check and return result.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check, loaded from pyproject.toml [tool.pycmdcheck.checks.] section.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult containing the status, message, and optional details."
+  },
+  {
+    "objectID": "reference/checks.base.Check.html#attributes",
+    "href": "reference/checks.base.Check.html#attributes",
+    "title": "checks.base.Check",
+    "section": "",
+    "text": "name : str\n\nUnique identifier for the check (e.g., “metadata”, “tests”).\n\ndescription : str\n\nHuman-readable description of what the check does."
+  },
+  {
+    "objectID": "reference/checks.base.Check.html#examples",
+    "href": "reference/checks.base.Check.html#examples",
+    "title": "checks.base.Check",
+    "section": "",
+    "text": "Implement a check using the protocol directly:\n&gt;&gt;&gt; class MyCheck:\n...     name = \"my_check\"\n...     description = \"My custom check\"\n...\n...     def run(self, package_path, config):\n...         return CheckResult(\n...             name=self.name,\n...             status=CheckStatus.OK,\n...             message=\"Check passed\",\n...         )\n&gt;&gt;&gt; isinstance(MyCheck(), Check)\nTrue"
+  },
+  {
+    "objectID": "reference/checks.base.Check.html#methods",
+    "href": "reference/checks.base.Check.html#methods",
+    "title": "checks.base.Check",
+    "section": "",
+    "text": "Name\nDescription\n\n\n\n\nrun\nExecute the check and return result.\n\n\n\n\n\nchecks.base.Check.run(package_path, config)\nExecute the check and return result.\n\n\n\npackage_path : Path\n\nPath to the package directory to check.\n\nconfig : dict[str, Any]\n\nConfiguration dictionary for this check, loaded from pyproject.toml [tool.pycmdcheck.checks.] section.\n\n\n\n\n\n\n : CheckResult\n\nA CheckResult containing the status, message, and optional details."
+  }
+]

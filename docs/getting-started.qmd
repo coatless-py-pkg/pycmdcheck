@@ -1,0 +1,118 @@
+---
+title: Getting Started
+---
+
+## Installation
+
+### Using pip
+
+```bash
+pip install pycmdcheck
+```
+
+### Using uv
+
+```bash
+uv add pycmdcheck
+```
+
+### Optional Dependencies
+
+pycmdcheck can use external tools for linting and type checking. Install the optional dependencies based on your needs:
+
+```bash
+# For mypy type checking
+pip install pycmdcheck[typing-mypy]
+
+# For pyright type checking
+pip install pycmdcheck[typing-pyright]
+
+# For ruff linting
+pip install pycmdcheck[linting]
+
+# All optional dependencies
+pip install pycmdcheck[all]
+```
+
+## Your First Check
+
+### Using the CLI
+
+Navigate to your Python package directory and run:
+
+```bash
+pycmdcheck
+```
+
+You'll see output like:
+
+```
+Checking package: /path/to/your/package
+
+┏━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ St… ┃ Check     ┃ Message                    ┃
+┡━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│  ✓  │ docs      │ Documentation present      │
+│  ✓  │ imports   │ All imports are valid      │
+│  ✓  │ license   │ License file present       │
+│  ✓  │ linting   │ No linting issues found    │
+│  ✓  │ metadata  │ Package metadata is valid  │
+│  ✓  │ structure │ Valid src layout structure │
+│  ✓  │ tests     │ All tests passed           │
+│  ✓  │ typing    │ No type errors found       │
+└─────┴───────────┴────────────────────────────┘
+
+8 ok
+
+All checks passed!
+```
+
+### Using Python
+
+```python
+from pycmdcheck import check
+
+# Check current directory
+report = check(".")
+
+# Print summary
+print(f"Passed: {report.passed}")
+print(f"Results: {len(report.results)} checks run")
+
+# Iterate over results
+for result in report.results:
+    print(f"{result.status.symbol} {result.name}: {result.message}")
+```
+
+## Understanding Check Results
+
+Each check returns one of five statuses:
+
+| Status | Symbol | Description |
+|--------|--------|-------------|
+| OK | ✓ | Check passed successfully |
+| NOTE | ℹ | Informational message, not a problem |
+| WARNING | ⚠ | Potential issue, should be reviewed |
+| ERROR | ✗ | Check failed |
+| SKIPPED | ○ | Check was skipped (e.g., tool not installed) |
+
+## Built-in Checks
+
+pycmdcheck includes 8 built-in checks:
+
+| Check | Description |
+|-------|-------------|
+| `metadata` | Validates pyproject.toml has required fields |
+| `structure` | Checks package directory structure |
+| `tests` | Runs pytest or unittest |
+| `linting` | Runs ruff, flake8, or pylint |
+| `typing` | Runs mypy or pyright |
+| `imports` | Validates all imports resolve |
+| `license` | Checks for LICENSE file |
+| `docs` | Checks for README file |
+
+## Next Steps
+
+- [CLI Reference](cli.qmd) - Learn all CLI options
+- [Configuration](configuration.qmd) - Configure checks in pyproject.toml
+- [Custom Checks](custom-checks.qmd) - Create your own checks

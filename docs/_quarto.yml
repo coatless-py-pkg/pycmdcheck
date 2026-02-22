@@ -1,0 +1,85 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: pycmdcheck
+  description: Python package quality checker inspired by R CMD check
+  navbar:
+    left:
+      - text: Getting Started
+        href: getting-started.qmd
+      - text: CLI Reference
+        href: cli.qmd
+      - text: Configuration
+        href: configuration.qmd
+      - text: Custom Checks
+        href: custom-checks.qmd
+      - text: API Reference
+        href: reference/index.qmd
+      - text: Changelog
+        href: changelog.qmd
+    right:
+      - icon: github
+        href: https://github.com/pycmdcheck/pycmdcheck
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+
+filters:
+  - interlinks
+
+interlinks:
+  sources:
+    python:
+      url: https://docs.python.org/3/
+
+quartodoc:
+  style: pkgdown
+  parser: google
+  dir: reference
+  package: pycmdcheck
+  render_interlinks: true
+  renderer:
+    style: markdown
+    table_style: description-list
+  title: API Reference
+  sidebar: reference/_sidebar.yml
+  sections:
+    - title: Main API
+      desc: Core functions and classes for using pycmdcheck
+      contents:
+        - check
+        - CheckResult
+        - CheckStatus
+        - Report
+    - title: Check Protocol
+      desc: Base classes for implementing custom checks
+      contents:
+        - checks.base.Check
+        - checks.base.BaseCheck
+    - title: Built-in Checks
+      desc: All built-in check implementations
+      contents:
+        - checks.metadata.MetadataCheck
+        - checks.structure.StructureCheck
+        - checks.tests.TestsCheck
+        - checks.linting.LintingCheck
+        - checks.typing.TypingCheck
+        - checks.imports.ImportsCheck
+        - checks.license.LicenseCheck
+        - checks.docs.DocsCheck
+    - title: Runner & Discovery
+      desc: Advanced API for running checks programmatically
+      contents:
+        - runner.run_checks
+        - discovery.discover_checks
+        - discovery.list_available_checks
+    - title: Configuration
+      desc: Configuration loading utilities
+      contents:
+        - config.load_config
+        - config.get_check_config
+        - config.is_check_enabled

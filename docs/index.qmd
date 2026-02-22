@@ -1,0 +1,71 @@
+---
+title: pycmdcheck
+subtitle: Python package quality checker inspired by R CMD check
+---
+
+## Overview
+
+**pycmdcheck** is a comprehensive quality checker for Python packages, inspired by R's `R CMD check`. It validates your package structure, metadata, tests, linting, type checking, and more—all from a single command.
+
+## Features
+
+- **Comprehensive Checks**: Validates metadata, structure, tests, linting, typing, imports, license, and documentation
+- **Configurable**: Enable/disable checks and configure tools via `pyproject.toml`
+- **Multiple Backends**: Supports ruff/flake8/pylint for linting, mypy/pyright for type checking
+- **Extensible**: Create custom checks via entry points
+- **Beautiful Output**: Rich terminal output with status indicators and details
+- **Parallel Execution**: Runs checks in parallel for speed
+
+## Quick Example
+
+### Command Line
+
+```bash
+# Check current directory
+pycmdcheck
+
+# Check specific directory
+pycmdcheck /path/to/package
+
+# Run only specific checks
+pycmdcheck -c tests -c linting
+
+# List available checks
+pycmdcheck --list
+```
+
+### Python API
+
+```python
+from pycmdcheck import check
+
+# Check a package
+report = check(".")
+
+# Check results
+if report.passed:
+    print("All checks passed!")
+else:
+    for result in report.results:
+        print(f"{result.status}: {result.name} - {result.message}")
+```
+
+## Installation
+
+```bash
+pip install pycmdcheck
+```
+
+Or with uv:
+
+```bash
+uv add pycmdcheck
+```
+
+## Next Steps
+
+- [Getting Started](getting-started.qmd) - Installation and first steps
+- [CLI Reference](cli.qmd) - Command-line usage
+- [Configuration](configuration.qmd) - Configure checks in pyproject.toml
+- [Custom Checks](custom-checks.qmd) - Create your own checks
+- [API Reference](reference/index.qmd) - Full API documentation

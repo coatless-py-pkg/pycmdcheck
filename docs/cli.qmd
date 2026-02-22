@@ -1,0 +1,189 @@
+---
+title: CLI Reference
+---
+
+## Basic Usage
+
+```bash
+pycmdcheck [OPTIONS] [PATH]
+```
+
+**PATH**: Directory to check (defaults to current directory)
+
+## Options
+
+### `-c, --check`
+
+Run only specific check(s). Can be specified multiple times.
+
+```bash
+# Run only metadata check
+pycmdcheck -c metadata
+
+# Run metadata and tests checks
+pycmdcheck -c metadata -c tests
+```
+
+### `-s, --skip`
+
+Skip specific check(s). Can be specified multiple times.
+
+```bash
+# Skip typing check
+pycmdcheck -s typing
+
+# Skip typing and linting
+pycmdcheck -s typing -s linting
+```
+
+### `--fail-on`
+
+Exit with non-zero code on specified statuses. Can be specified multiple times. Default: `error`
+
+```bash
+# Fail on errors only (default)
+pycmdcheck --fail-on error
+
+# Fail on errors and warnings
+pycmdcheck --fail-on error --fail-on warning
+
+# Fail on any issue including notes
+pycmdcheck --fail-on error --fail-on warning --fail-on note
+```
+
+### `--list`
+
+List all available checks and exit.
+
+```bash
+pycmdcheck --list
+```
+
+Output:
+```
+                     Available Checks
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Name      ┃ Description                                ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ docs      │ Check documentation (README, docstrings)   │
+│ imports   │ Validate package imports                   │
+│ license   │ Check for license file                     │
+│ linting   │ Run code linting (ruff/flake8/pylint)      │
+│ metadata  │ Validate package metadata (pyproject.toml) │
+│ structure │ Validate package directory structure       │
+│ tests     │ Run package tests (pytest/unittest)        │
+│ typing    │ Run type checking (mypy/pyright)           │
+└───────────┴────────────────────────────────────────────┘
+```
+
+### `-v, --verbose`
+
+Show detailed output including timing and details for each check.
+
+```bash
+pycmdcheck -v
+```
+
+### `--json`
+
+Output results as JSON for programmatic consumption.
+
+```bash
+pycmdcheck --json
+```
+
+Example output:
+```json
+{
+  "package_path": "/path/to/package",
+  "passed": true,
+  "summary": {
+    "ok": 8,
+    "note": 0,
+    "warning": 0,
+    "error": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "name": "metadata",
+      "status": "ok",
+      "message": "Package metadata is valid",
+      "details": ["All metadata fields present"],
+      "duration": 0.001
+    }
+  ]
+}
+```
+
+### `--no-parallel`
+
+Run checks sequentially instead of in parallel.
+
+```bash
+pycmdcheck --no-parallel
+```
+
+### `--version`
+
+Show version and exit.
+
+```bash
+pycmdcheck --version
+```
+
+### `--help`
+
+Show help message and exit.
+
+```bash
+pycmdcheck --help
+```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All checks passed (no status matching `--fail-on`) |
+| 1 | One or more checks failed (status matched `--fail-on`) |
+
+## Examples
+
+### CI/CD Integration
+
+```bash
+# Fail on any error (default behavior)
+pycmdcheck
+
+# Stricter: fail on warnings too
+pycmdcheck --fail-on error --fail-on warning
+
+# Skip slow checks in CI
+pycmdcheck -s typing
+
+# JSON output for parsing
+pycmdcheck --json > results.json
+```
+
+### Development Workflow
+
+```bash
+# Quick check during development
+pycmdcheck -c metadata -c structure
+
+# Full check before commit
+pycmdcheck -v
+
+# List what will be checked
+pycmdcheck --list
+```
+
+### Using with uv
+
+```bash
+# Run via uv
+uv run pycmdcheck
+
+# With options
+uv run pycmdcheck -c tests -v
+```

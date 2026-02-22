@@ -1,0 +1,42 @@
+# config.load_config { #pycmdcheck.config.load_config }
+
+```python
+config.load_config(package_path)
+```
+
+Load pycmdcheck configuration from pyproject.toml.
+
+Reads the [tool.pycmdcheck] section from the package's pyproject.toml
+and merges it with default configuration. If no pyproject.toml exists
+or it doesn't contain pycmdcheck configuration, returns defaults.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory containing pyproject.toml.
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary with the following structure:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   - fail_on: List of statuses to fail on (default: ["error"])
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   - checks: Dictionary of check configurations
+
+## Examples {.doc-section .doc-section-examples}
+
+```python
+>>> from pathlib import Path
+>>> config = load_config(Path("."))
+>>> config["fail_on"]
+['error']
+>>> config["checks"]["tests"]["runner"]
+'pytest'
+```

@@ -1,0 +1,56 @@
+# API Reference {.doc .doc-index}
+
+## Main API
+
+Core functions and classes for using pycmdcheck
+
+| | |
+| --- | --- |
+| [check](check.qmd#pycmdcheck.check) | Check a Python package for quality issues. |
+| [CheckResult](CheckResult.qmd#pycmdcheck.CheckResult) | Result of a single check. |
+| [CheckStatus](CheckStatus.qmd#pycmdcheck.CheckStatus) | Status of a check result. |
+| [Report](Report.qmd#pycmdcheck.Report) | Collection of check results for a package. |
+
+## Check Protocol
+
+Base classes for implementing custom checks
+
+| | |
+| --- | --- |
+| [checks.base.Check](checks.base.Check.qmd#pycmdcheck.checks.base.Check) | Protocol defining the interface for all checks. |
+| [checks.base.BaseCheck](checks.base.BaseCheck.qmd#pycmdcheck.checks.base.BaseCheck) | Abstract base class for implementing checks. |
+
+## Built-in Checks
+
+All built-in check implementations
+
+| | |
+| --- | --- |
+| [checks.metadata.MetadataCheck](checks.metadata.MetadataCheck.qmd#pycmdcheck.checks.metadata.MetadataCheck) | Check that package metadata is valid and complete. |
+| [checks.structure.StructureCheck](checks.structure.StructureCheck.qmd#pycmdcheck.checks.structure.StructureCheck) | Check that package has a valid directory structure. |
+| [checks.tests.TestsCheck](checks.tests.TestsCheck.qmd#pycmdcheck.checks.tests.TestsCheck) | Run package tests and report results. |
+| [checks.linting.LintingCheck](checks.linting.LintingCheck.qmd#pycmdcheck.checks.linting.LintingCheck) | Run linting tools on the package. |
+| [checks.typing.TypingCheck](checks.typing.TypingCheck.qmd#pycmdcheck.checks.typing.TypingCheck) | Run type checking tools on the package. |
+| [checks.imports.ImportsCheck](checks.imports.ImportsCheck.qmd#pycmdcheck.checks.imports.ImportsCheck) | Check that all imports in the package can be resolved. |
+| [checks.license.LicenseCheck](checks.license.LicenseCheck.qmd#pycmdcheck.checks.license.LicenseCheck) | Check that the package has a license file. |
+| [checks.docs.DocsCheck](checks.docs.DocsCheck.qmd#pycmdcheck.checks.docs.DocsCheck) | Check for documentation presence and quality. |
+
+## Runner & Discovery
+
+Advanced API for running checks programmatically
+
+| | |
+| --- | --- |
+| [runner.run_checks](runner.run_checks.qmd#pycmdcheck.runner.run_checks) | Run checks on a package. |
+| [discovery.discover_checks](discovery.discover_checks.qmd#pycmdcheck.discovery.discover_checks) | Discover all registered checks via entry points. |
+| [discovery.list_available_checks](discovery.list_available_checks.qmd#pycmdcheck.discovery.list_available_checks) | List all available checks with their descriptions. |
+
+## Configuration
+
+Configuration loading utilities
+
+| | |
+| --- | --- |
+| [config.load_config](config.load_config.qmd#pycmdcheck.config.load_config) | Load pycmdcheck configuration from pyproject.toml. |
+| [config.get_check_config](config.get_check_config.qmd#pycmdcheck.config.get_check_config) | Get configuration for a specific check. |
+| [config.is_check_enabled](config.is_check_enabled.qmd#pycmdcheck.config.is_check_enabled) | Check if a specific check is enabled. |

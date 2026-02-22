@@ -1,0 +1,72 @@
+# checks.base.Check { #pycmdcheck.checks.base.Check }
+
+```python
+checks.base.Check()
+```
+
+Protocol defining the interface for all checks.
+
+This protocol defines what a check must implement to be usable
+by pycmdcheck. Checks can be implemented by either:
+
+1. Inheriting from BaseCheck (recommended for most cases)
+2. Implementing this Protocol directly (for structural subtyping)
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Unique identifier for the check (e.g., "metadata", "tests").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Human-readable description of what the check does.
+
+## Examples {.doc-section .doc-section-examples}
+
+Implement a check using the protocol directly:
+
+```python
+>>> class MyCheck:
+...     name = "my_check"
+...     description = "My custom check"
+...
+...     def run(self, package_path, config):
+...         return CheckResult(
+...             name=self.name,
+...             status=CheckStatus.OK,
+...             message="Check passed",
+...         )
+>>> isinstance(MyCheck(), Check)
+True
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.base.Check.run) | Execute the check and return result. |
+
+### run { #pycmdcheck.checks.base.Check.run }
+
+```python
+checks.base.Check.run(package_path, config)
+```
+
+Execute the check and return result.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for this check, loaded from pyproject.toml [tool.pycmdcheck.checks.<name>] section.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult containing the status, message, and optional details.

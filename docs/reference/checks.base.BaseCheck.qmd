@@ -1,0 +1,116 @@
+# checks.base.BaseCheck { #pycmdcheck.checks.base.BaseCheck }
+
+```python
+checks.base.BaseCheck()
+```
+
+Abstract base class for implementing checks.
+
+This is the recommended way to implement custom checks. Subclasses
+must override the `name`, `description` attributes and implement
+the `run` method.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Unique identifier for the check. Override in subclass.
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Human-readable description. Override in subclass.
+
+## Examples {.doc-section .doc-section-examples}
+
+Create a custom check:
+
+```python
+>>> from pycmdcheck.checks.base import BaseCheck
+>>> from pycmdcheck.results import CheckResult, CheckStatus
+>>>
+>>> class CopyrightCheck(BaseCheck):
+...     name = "copyright"
+...     description = "Check for copyright headers"
+...
+...     def run(self, package_path, config):
+...         # Check logic here
+...         return CheckResult(
+...             name=self.name,
+...             status=CheckStatus.OK,
+...             message="All files have copyright headers",
+...         )
+```
+
+Register via entry points in pyproject.toml:
+
+```toml
+[project.entry-points."pycmdcheck.checks"]
+copyright = "my_package.checks:CopyrightCheck"
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.base.BaseCheck.run) | Execute the check and return result. |
+
+### run { #pycmdcheck.checks.base.BaseCheck.run }
+
+```python
+checks.base.BaseCheck.run(package_path, config)
+```
+
+Execute the check and return result.
+
+Subclasses must implement this method to perform the actual check.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check. This is always an absolute, resolved path.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for this check. Contains any options specified in pyproject.toml under [tool.pycmdcheck.checks.<name>]. Common keys include "enabled" (bool) and check-specific options.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - name: Should match self.name
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - status: One of CheckStatus values (OK, WARNING, ERROR, etc.)
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - message: Brief description of the result
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - details: Optional list of specific issues found
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> def run(self, package_path, config):
+...     issues = self._find_issues(package_path)
+...     if issues:
+...         return CheckResult(
+...             name=self.name,
+...             status=CheckStatus.WARNING,
+...             message=f"Found {len(issues)} issues",
+...             details=issues,
+...         )
+...     return CheckResult(
+...         name=self.name,
+...         status=CheckStatus.OK,
+...         message="No issues found",
+...     )
+```

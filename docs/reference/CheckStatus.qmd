@@ -1,0 +1,44 @@
+# CheckStatus { #pycmdcheck.CheckStatus }
+
+```python
+CheckStatus()
+```
+
+Status of a check result.
+
+Each check returns one of these statuses to indicate
+whether the check passed, failed, or encountered issues.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**OK**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Check passed successfully.
+
+<code>[**NOTE**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Informational message, not a problem.
+
+<code>[**WARNING**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Potential issue that should be reviewed.
+
+<code>[**ERROR**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Check failed.
+
+<code>[**SKIPPED**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Check was skipped (e.g., required tool not installed).
+
+## Examples {.doc-section .doc-section-examples}
+
+```python
+>>> status = CheckStatus.OK
+>>> status.symbol
+'✓'
+>>> status.color
+'green'
+>>> str(status)
+'ok'
+```

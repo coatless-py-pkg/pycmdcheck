@@ -1,0 +1,102 @@
+# checks.typing.TypingCheck { #pycmdcheck.checks.typing.TypingCheck }
+
+```python
+checks.typing.TypingCheck()
+```
+
+Run type checking tools on the package.
+
+Executes a configurable static type checker to verify type
+annotations. Supports mypy (default) and pyright.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("typing").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+<code>[**SUPPORTED_TOOLS**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   List of supported type checking tools.
+
+## Configuration Options {.doc-section .doc-section-configuration-options}
+
+tool (str): Type checker to use ("mypy" or "pyright").
+    Defaults to "mypy".
+strict (bool): Whether to enable strict mode. Defaults to False.
+args (list[str]): Additional arguments to pass to the type checker.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run type checking with default settings (mypy):
+
+```python
+>>> from pathlib import Path
+>>> check = TypingCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'typing'
+```
+
+Configure to use pyright:
+
+```python
+>>> config = {"enabled": True, "tool": "pyright"}
+>>> result = check.run(Path("."), config)
+```
+
+Enable strict mode:
+
+```python
+>>> config = {"enabled": True, "strict": True}
+>>> result = check.run(Path("."), config)
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.typing.TypingCheck.run) | Run type checking on the package. |
+
+### run { #pycmdcheck.checks.typing.TypingCheck.run }
+
+```python
+checks.typing.TypingCheck.run(package_path, config)
+```
+
+Run type checking on the package.
+
+Executes the configured type checker and collects any errors found.
+Errors are reported in the result details (limited to first 10).
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary with options:  - tool (str): "mypy" or "pyright" (default: "mypy") - strict (bool): Enable strict mode (default: False) - args (list[str]): Additional arguments for the checker
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if no type errors found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - ERROR status if type errors found or checker fails
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - SKIPPED status if the type checker is not installed

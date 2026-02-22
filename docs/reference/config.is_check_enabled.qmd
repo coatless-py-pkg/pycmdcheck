@@ -1,0 +1,38 @@
+# config.is_check_enabled { #pycmdcheck.config.is_check_enabled }
+
+```python
+config.is_check_enabled(config, check_name)
+```
+
+Check if a specific check is enabled.
+
+Convenience function to determine if a check should run based on
+the configuration.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Full pycmdcheck configuration dictionary.
+
+<code>[**check_name**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Name of the check to query.
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[bool](`bool`)]{.parameter-annotation}</code>
+
+:   True if the check is enabled, False otherwise.
+
+## Examples {.doc-section .doc-section-examples}
+
+```python
+>>> config = {"checks": {"metadata": True, "linting": False}}
+>>> is_check_enabled(config, "metadata")
+True
+>>> is_check_enabled(config, "linting")
+False
+>>> is_check_enabled(config, "unknown")  # Defaults to enabled
+True
+```

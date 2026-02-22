@@ -1,0 +1,96 @@
+# checks.imports.ImportsCheck { #pycmdcheck.checks.imports.ImportsCheck }
+
+```python
+checks.imports.ImportsCheck()
+```
+
+Check that all imports in the package can be resolved.
+
+Scans all Python files in the package and attempts to resolve
+each import statement. Reports any imports that cannot be found,
+which may indicate missing dependencies.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("imports").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+## Note {.doc-section .doc-section-note}
+
+This check excludes standard library modules and local package
+imports from validation. It only flags third-party imports that
+cannot be resolved in the current environment.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run the imports check:
+
+```python
+>>> from pathlib import Path
+>>> check = ImportsCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'imports'
+```
+
+The check reports unresolvable imports:
+
+```python
+>>> # If a file imports 'nonexistent_package'
+>>> # result.status == CheckStatus.WARNING
+>>> # "Cannot import 'nonexistent_package'" in result.details
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.imports.ImportsCheck.run) | Check imports in all Python files. |
+
+### run { #pycmdcheck.checks.imports.ImportsCheck.run }
+
+```python
+checks.imports.ImportsCheck.run(package_path, config)
+```
+
+Check imports in all Python files.
+
+Parses each Python file to extract import statements, then
+attempts to import each module to verify it exists.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for this check. Currently no check-specific options are used.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if all imports can be resolved
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - NOTE status if no Python files found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if some imports cannot be resolved
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - ERROR status if Python files have syntax errors

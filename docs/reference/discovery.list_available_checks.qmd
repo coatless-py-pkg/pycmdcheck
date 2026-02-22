@@ -1,0 +1,60 @@
+# discovery.list_available_checks { #pycmdcheck.discovery.list_available_checks }
+
+```python
+discovery.list_available_checks()
+```
+
+List all available checks with their descriptions.
+
+Discovers all registered checks and returns their names and
+descriptions in a format suitable for display (e.g., in CLI help).
+Results are sorted alphabetically by check name.
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[tuple](`tuple`)\[[str](`str`), [str](`str`)\]\]]{.parameter-annotation}</code>
+
+:   A list of (name, description) tuples, sorted alphabetically
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[tuple](`tuple`)\[[str](`str`), [str](`str`)\]\]]{.parameter-annotation}</code>
+
+:   by name. Each tuple contains:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[tuple](`tuple`)\[[str](`str`), [str](`str`)\]\]]{.parameter-annotation}</code>
+
+:   - name: The check's unique identifier (str)
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[tuple](`tuple`)\[[str](`str`), [str](`str`)\]\]]{.parameter-annotation}</code>
+
+:   - description: Human-readable description of what the check does (str)
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[tuple](`tuple`)\[[str](`str`), [str](`str`)\]\]]{.parameter-annotation}</code>
+
+:   If a check's description cannot be retrieved, "No description
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[tuple](`tuple`)\[[str](`str`), [str](`str`)\]\]]{.parameter-annotation}</code>
+
+:   available" is used as a fallback.
+
+## Examples {.doc-section .doc-section-examples}
+
+List all checks for display:
+
+```python
+>>> checks = list_available_checks()
+>>> len(checks) > 0
+True
+>>> name, description = checks[0]
+>>> isinstance(name, str) and isinstance(description, str)
+True
+```
+
+Display in CLI:
+
+```python
+>>> for name, desc in list_available_checks():
+...     print(f"  {name}: {desc}")
+  docs: Check documentation presence
+  imports: Check that package imports work
+  ...
+```

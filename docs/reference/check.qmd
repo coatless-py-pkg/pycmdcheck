@@ -1,0 +1,73 @@
+# check { #pycmdcheck.check }
+
+```python
+check(path='.', *, checks=None, skip=None, fail_on=None)
+```
+
+Check a Python package for quality issues.
+
+This is the main entry point for programmatic use of pycmdcheck.
+It discovers available checks via entry points, loads configuration
+from pyproject.toml, and runs the enabled checks.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+<code>[**path**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation} [ = ]{.parameter-default-sep} [\'.\']{.parameter-default}</code>
+
+:   Path to the package directory. Defaults to current directory.
+
+<code>[**checks**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\] \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   List of check names to run. If None, runs all enabled checks from configuration. Available checks: metadata, structure, tests, linting, typing, imports, license, docs.
+
+<code>[**skip**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\] \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   List of check names to skip, even if enabled in configuration.
+
+<code>[**fail_on**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\] \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   List of statuses to consider as failures when calling report.failed_on(). Defaults to ["error"]. Not used directly by this function but useful for the caller.
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[Report](`pycmdcheck.results.Report`)]{.parameter-annotation}</code>
+
+:   A Report object containing all check results. Use report.passed to
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[Report](`pycmdcheck.results.Report`)]{.parameter-annotation}</code>
+
+:   check if all checks passed, or iterate report.results for details.
+
+## Examples {.doc-section .doc-section-examples}
+
+Basic usage - check current directory:
+
+```python
+>>> from pycmdcheck import check
+>>> report = check(".")
+>>> report.passed
+True
+```
+
+Run only specific checks:
+
+```python
+>>> report = check(".", checks=["metadata", "tests"])
+>>> len(report.results)
+2
+```
+
+Skip certain checks:
+
+```python
+>>> report = check(".", skip=["typing", "linting"])
+```
+
+Iterate over results:
+
+```python
+>>> for result in report.results:
+...     print(f"{result.status.symbol} {result.name}: {result.message}")
+✓ metadata: Package metadata is valid
+✓ tests: All tests passed
+```

@@ -1,0 +1,57 @@
+# config.get_check_config { #pycmdcheck.config.get_check_config }
+
+```python
+config.get_check_config(config, check_name)
+```
+
+Get configuration for a specific check.
+
+Extracts the configuration for a named check from the full configuration.
+Handles both boolean shorthand (e.g., `metadata = true`) and dictionary
+configuration (e.g., `tests = { enabled = true, runner = "pytest" }`).
+
+## Parameters {.doc-section .doc-section-parameters}
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Full pycmdcheck configuration dictionary, as returned by load_config().
+
+<code>[**check_name**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Name of the check to get configuration for (e.g., "metadata", "tests", "linting").
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for the check, always containing an
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   "enabled" key. Additional keys depend on the check type.
+
+## Examples {.doc-section .doc-section-examples}
+
+Boolean config is converted to dict:
+
+```python
+>>> config = {"checks": {"metadata": True}}
+>>> get_check_config(config, "metadata")
+{'enabled': True}
+```
+
+Dict config is passed through with enabled defaulting to True:
+
+```python
+>>> config = {"checks": {"tests": {"runner": "pytest"}}}
+>>> get_check_config(config, "tests")
+{'runner': 'pytest', 'enabled': True}
+```
+
+Unknown checks default to enabled:
+
+```python
+>>> config = {"checks": {}}
+>>> get_check_config(config, "unknown")
+{'enabled': True}
+```

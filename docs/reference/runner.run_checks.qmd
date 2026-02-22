@@ -1,0 +1,73 @@
+# runner.run_checks { #pycmdcheck.runner.run_checks }
+
+```python
+runner.run_checks(
+    package_path,
+    checks=None,
+    skip=None,
+    config=None,
+    parallel=True,
+)
+```
+
+Run checks on a package.
+
+This is the core function that orchestrates check discovery and execution.
+It loads configuration, discovers available checks via entry points,
+and runs them either in parallel or sequentially.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`) \| [Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check. Can be a string or Path object. Will be resolved to an absolute path.
+
+<code>[**checks**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\] \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   List of specific check names to run. If None, runs all checks that are enabled in the configuration. Available built-in checks: metadata, structure, tests, linting, typing, imports, license, docs.
+
+<code>[**skip**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\] \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   List of check names to skip, even if they would otherwise run.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\] \| None]{.parameter-annotation} [ = ]{.parameter-default-sep} [None]{.parameter-default}</code>
+
+:   Pre-loaded configuration dictionary. If None, configuration is loaded from the package's pyproject.toml file.
+
+<code>[**parallel**]{.parameter-name} [:]{.parameter-annotation-sep} [[bool](`bool`)]{.parameter-annotation} [ = ]{.parameter-default-sep} [True]{.parameter-default}</code>
+
+:   Whether to run checks in parallel using threads. Defaults to True. Set to False for deterministic ordering or debugging.
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[Report](`pycmdcheck.results.Report`)]{.parameter-annotation}</code>
+
+:   A Report object containing all check results. The report includes
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[Report](`pycmdcheck.results.Report`)]{.parameter-annotation}</code>
+
+:   the package path and a list of CheckResult objects.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run all enabled checks:
+
+```python
+>>> report = run_checks("/path/to/package")
+>>> report.passed
+True
+```
+
+Run specific checks only:
+
+```python
+>>> report = run_checks(".", checks=["metadata", "tests"])
+>>> len(report.results)
+2
+```
+
+Run sequentially for debugging:
+
+```python
+>>> report = run_checks(".", parallel=False)
+```

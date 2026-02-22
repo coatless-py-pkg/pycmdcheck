@@ -1,0 +1,98 @@
+# checks.metadata.MetadataCheck { #pycmdcheck.checks.metadata.MetadataCheck }
+
+```python
+checks.metadata.MetadataCheck()
+```
+
+Check that package metadata is valid and complete.
+
+Validates package metadata according to PEP 621 (pyproject.toml).
+Checks for required fields (name, version) and recommends additional
+fields (description, readme, license, requires-python).
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("metadata").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+<code>[**REQUIRED_FIELDS**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   List of fields that must be present in [project].
+
+<code>[**RECOMMENDED_FIELDS**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   List of fields that should be present.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run the metadata check on a package:
+
+```python
+>>> from pathlib import Path
+>>> check = MetadataCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.status in [CheckStatus.OK, CheckStatus.NOTE, CheckStatus.ERROR]
+True
+```
+
+The check validates pyproject.toml structure:
+
+```python
+>>> check.REQUIRED_FIELDS
+['name', 'version']
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.metadata.MetadataCheck.run) | Check package metadata for validity and completeness. |
+
+### run { #pycmdcheck.checks.metadata.MetadataCheck.run }
+
+```python
+checks.metadata.MetadataCheck.run(package_path, config)
+```
+
+Check package metadata for validity and completeness.
+
+Looks for pyproject.toml first (preferred), falling back to
+setup.py/setup.cfg (legacy). Validates required fields and
+suggests recommended fields.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory containing pyproject.toml or setup files.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for this check. Currently no check-specific options are used.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if all required and recommended fields present
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - NOTE status if required fields present but some recommended missing
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if using legacy setup.py/setup.cfg
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - ERROR status if pyproject.toml is invalid or missing required fields

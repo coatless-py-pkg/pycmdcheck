@@ -1,0 +1,264 @@
+---
+title: Custom Checks
+---
+
+pycmdcheck is designed to be extensible. You can create custom checks and register them via Python entry points.
+
+## The Check Protocol
+
+All checks must implement the `Check` protocol:
+
+```python
+from typing import Protocol, Any
+from pathlib import Path
+from pycmdcheck.results import CheckResult
+
+class Check(Protocol):
+    name: str
+    description: str
+
+    def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
+        ...
+```
+
+## Using BaseCheck (Recommended)
+
+The easiest way to create a custom check is to inherit from `BaseCheck`:
+
+```python
+from pathlib import Path
+from typing import Any
+
+from pycmdcheck.checks.base import BaseCheck
+from pycmdcheck.results import CheckResult, CheckStatus
+
+
+class SecurityCheck(BaseCheck):
+    """Check for common security issues."""
+
+    name = "security"
+    description = "Check for common security issues"
+
+    def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
+        details: list[str] = []
+        issues: list[str] = []
+
+        # Check for .env files that shouldn't be committed
+        env_files = list(package_path.glob("**/.env"))
+        if env_files:
+            issues.append(f"Found {len(env_files)} .env file(s)")
+
+        # Check for hardcoded secrets (simplified example)
+        for py_file in package_path.rglob("*.py"):
+            content = py_file.read_text()
+            if "password=" in content.lower() or "api_key=" in content.lower():
+                issues.append(f"Potential hardcoded secret in {py_file.name}")
+
+        # Return result
+        if issues:
+            return CheckResult(
+                name=self.name,
+                status=CheckStatus.WARNING,
+                message=f"Found {len(issues)} security issue(s)",
+                details=issues,
+            )
+
+        details.append("No security issues found")
+        return CheckResult(
+            name=self.name,
+            status=CheckStatus.OK,
+            message="Security check passed",
+            details=details,
+        )
+```
+
+## CheckResult
+
+The `CheckResult` dataclass is used to return check results:
+
+```python
+from pycmdcheck.results import CheckResult, CheckStatus
+
+result = CheckResult(
+    name="my_check",           # Check name
+    status=CheckStatus.OK,      # Status enum
+    message="Check passed",     # Main message
+    details=["Detail 1"],       # Optional list of details
+)
+```
+
+### CheckStatus Values
+
+| Status | When to Use |
+|--------|-------------|
+| `CheckStatus.OK` | Check passed successfully |
+| `CheckStatus.NOTE` | Informational message, not a problem |
+| `CheckStatus.WARNING` | Potential issue, should be reviewed |
+| `CheckStatus.ERROR` | Check failed |
+| `CheckStatus.SKIPPED` | Check couldn't run (e.g., tool not installed) |
+
+## Registering Your Check
+
+Register your check using Python entry points in your `pyproject.toml`:
+
+```toml
+[project.entry-points."pycmdcheck.checks"]
+security = "my_package.checks:SecurityCheck"
+```
+
+The format is:
+```
+check_name = "module.path:ClassName"
+```
+
+## Using Configuration
+
+Checks receive their configuration via the `config` parameter:
+
+```python
+def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
+    # Get configuration options
+    strict = config.get("strict", False)
+    patterns = config.get("patterns", [])
+
+    # Use in your check logic
+    if strict:
+        # More rigorous checking
+        ...
+```
+
+Users configure your check in their `pyproject.toml`:
+
+```toml
+[tool.pycmdcheck.checks]
+security = { enabled = true, strict = true, patterns = ["*.key", "*.pem"] }
+```
+
+## Complete Example
+
+Here's a complete example of a custom check that validates copyright headers:
+
+### check_copyright.py
+
+```python
+"""Custom check for copyright headers."""
+
+from pathlib import Path
+from typing import Any
+
+from pycmdcheck.checks.base import BaseCheck
+from pycmdcheck.results import CheckResult, CheckStatus
+
+
+class CopyrightCheck(BaseCheck):
+    """Check that all Python files have copyright headers."""
+
+    name = "copyright"
+    description = "Check for copyright headers in Python files"
+
+    def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
+        # Get configuration
+        required_text = config.get("text", "Copyright")
+        exclude_patterns = config.get("exclude", ["test_*.py", "*_test.py"])
+
+        # Find Python files
+        py_files = list(package_path.rglob("*.py"))
+
+        # Filter excluded files
+        def is_excluded(path: Path) -> bool:
+            return any(path.match(pat) for pat in exclude_patterns)
+
+        py_files = [f for f in py_files if not is_excluded(f)]
+
+        if not py_files:
+            return CheckResult(
+                name=self.name,
+                status=CheckStatus.SKIPPED,
+                message="No Python files to check",
+            )
+
+        # Check each file
+        missing: list[str] = []
+        for py_file in py_files:
+            content = py_file.read_text()
+            # Check first 10 lines for copyright
+            first_lines = "\n".join(content.split("\n")[:10])
+            if required_text not in first_lines:
+                rel_path = py_file.relative_to(package_path)
+                missing.append(str(rel_path))
+
+        # Return result
+        if missing:
+            return CheckResult(
+                name=self.name,
+                status=CheckStatus.WARNING,
+                message=f"{len(missing)} file(s) missing copyright header",
+                details=missing[:10],  # Limit details
+            )
+
+        return CheckResult(
+            name=self.name,
+            status=CheckStatus.OK,
+            message=f"All {len(py_files)} files have copyright headers",
+        )
+```
+
+### pyproject.toml (in your package)
+
+```toml
+[project.entry-points."pycmdcheck.checks"]
+copyright = "my_package.checks.check_copyright:CopyrightCheck"
+```
+
+### Usage in target project
+
+```toml
+[tool.pycmdcheck.checks]
+copyright = { enabled = true, text = "Copyright 2024 My Company" }
+```
+
+## Testing Your Check
+
+Test your check by instantiating it and calling `run()`:
+
+```python
+import tempfile
+from pathlib import Path
+
+from my_package.checks import CopyrightCheck
+
+
+def test_copyright_check_passes():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pkg = Path(tmpdir)
+
+        # Create a file with copyright
+        (pkg / "module.py").write_text('"""Copyright 2024"""\n\ndef foo(): pass')
+
+        check = CopyrightCheck()
+        result = check.run(pkg, {"text": "Copyright"})
+
+        assert result.status.value == "ok"
+
+
+def test_copyright_check_warns():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pkg = Path(tmpdir)
+
+        # Create a file without copyright
+        (pkg / "module.py").write_text("def foo(): pass")
+
+        check = CopyrightCheck()
+        result = check.run(pkg, {"text": "Copyright"})
+
+        assert result.status.value == "warning"
+```
+
+## Best Practices
+
+1. **Use descriptive names**: The `name` attribute should be short and descriptive
+2. **Provide helpful messages**: The `message` should explain what happened
+3. **Include details**: Use the `details` list for specific file names or issues
+4. **Handle errors gracefully**: Return `SKIPPED` if tools aren't available
+5. **Respect configuration**: Make your check configurable via the `config` dict
+6. **Test thoroughly**: Write tests for all status outcomes

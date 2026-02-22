@@ -1,0 +1,51 @@
+# discovery.discover_checks { #pycmdcheck.discovery.discover_checks }
+
+```python
+discovery.discover_checks()
+```
+
+Discover all registered checks via entry points.
+
+Scans the ``pycmdcheck.checks`` entry point group and loads all
+registered check classes. Built-in checks are registered in the
+package's pyproject.toml, and third-party packages can register
+additional checks.
+
+If a check fails to load (e.g., due to an import error), a
+UserWarning is issued but discovery continues with other checks.
+
+## Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [type](`type`)\[[Check](`pycmdcheck.checks.base.Check`)\]\]]{.parameter-annotation}</code>
+
+:   A dictionary mapping check names (strings) to check classes.
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [type](`type`)\[[Check](`pycmdcheck.checks.base.Check`)\]\]]{.parameter-annotation}</code>
+
+:   The check classes implement the Check protocol from
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [type](`type`)\[[Check](`pycmdcheck.checks.base.Check`)\]\]]{.parameter-annotation}</code>
+
+:   pycmdcheck.checks.base.
+
+## Examples {.doc-section .doc-section-examples}
+
+Discover all available checks:
+
+```python
+>>> checks = discover_checks()
+>>> "metadata" in checks
+True
+>>> "tests" in checks
+True
+```
+
+Get a specific check class:
+
+```python
+>>> checks = discover_checks()
+>>> MetadataCheck = checks["metadata"]
+>>> instance = MetadataCheck()
+>>> instance.name
+'metadata'
+```

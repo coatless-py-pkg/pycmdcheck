@@ -1,0 +1,244 @@
+---
+title: Configuration
+---
+
+pycmdcheck is configured via the `[tool.pycmdcheck]` section in your `pyproject.toml`.
+
+## Basic Configuration
+
+```toml
+[tool.pycmdcheck]
+# Exit with non-zero code on these statuses
+fail_on = ["error"]
+
+[tool.pycmdcheck.checks]
+# Enable/disable checks
+metadata = true
+structure = true
+tests = true
+linting = true
+typing = true
+imports = true
+license = true
+docs = true
+```
+
+## Global Options
+
+### `fail_on`
+
+List of statuses that should cause a non-zero exit code.
+
+```toml
+[tool.pycmdcheck]
+# Default: only errors
+fail_on = ["error"]
+
+# Strict: fail on warnings too
+fail_on = ["error", "warning"]
+
+# Very strict: fail on any issue
+fail_on = ["error", "warning", "note"]
+```
+
+## Check Configuration
+
+Checks can be configured in two ways:
+
+### Boolean (Simple)
+
+```toml
+[tool.pycmdcheck.checks]
+metadata = true   # Enable
+linting = false   # Disable
+```
+
+### Dictionary (With Options)
+
+```toml
+[tool.pycmdcheck.checks]
+tests = { enabled = true, runner = "pytest" }
+linting = { enabled = true, tool = "ruff" }
+```
+
+## Per-Check Options
+
+### metadata
+
+Validates `pyproject.toml` has required and recommended fields.
+
+```toml
+[tool.pycmdcheck.checks]
+metadata = true  # No additional options
+```
+
+**Required fields**: `name`, `version`
+**Recommended fields**: `description`, `readme`, `license`, `requires-python`
+
+### structure
+
+Validates package directory structure.
+
+```toml
+[tool.pycmdcheck.checks]
+structure = true  # No additional options
+```
+
+Supports both src layout (`src/package/`) and flat layout (`package/`).
+
+### tests
+
+Runs package tests.
+
+```toml
+[tool.pycmdcheck.checks]
+tests = { enabled = true, runner = "pytest" }
+```
+
+**Options:**
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `runner` | `"pytest"`, `"unittest"` | `"pytest"` | Test runner to use |
+| `args` | list of strings | `[]` | Additional arguments |
+
+**Examples:**
+
+```toml
+# Use pytest (default)
+tests = { enabled = true, runner = "pytest" }
+
+# Use unittest
+tests = { enabled = true, runner = "unittest" }
+
+# With custom args
+tests = { enabled = true, runner = "pytest", args = ["-x", "--tb=short"] }
+```
+
+### linting
+
+Runs code linting.
+
+```toml
+[tool.pycmdcheck.checks]
+linting = { enabled = true, tool = "ruff" }
+```
+
+**Options:**
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `tool` | `"ruff"`, `"flake8"`, `"pylint"` | `"ruff"` | Linting tool |
+| `args` | list of strings | `[]` | Additional arguments |
+
+**Examples:**
+
+```toml
+# Use ruff (default, recommended)
+linting = { enabled = true, tool = "ruff" }
+
+# Use flake8
+linting = { enabled = true, tool = "flake8" }
+
+# Use pylint
+linting = { enabled = true, tool = "pylint" }
+
+# With custom args
+linting = { enabled = true, tool = "ruff", args = ["--select", "E,F,W"] }
+```
+
+### typing
+
+Runs type checking.
+
+```toml
+[tool.pycmdcheck.checks]
+typing = { enabled = true, tool = "mypy" }
+```
+
+**Options:**
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `tool` | `"mypy"`, `"pyright"` | `"mypy"` | Type checker |
+| `strict` | boolean | `false` | Enable strict mode |
+| `args` | list of strings | `[]` | Additional arguments |
+
+**Examples:**
+
+```toml
+# Use mypy (default)
+typing = { enabled = true, tool = "mypy" }
+
+# Use pyright
+typing = { enabled = true, tool = "pyright" }
+
+# Strict mode
+typing = { enabled = true, tool = "mypy", strict = true }
+
+# With custom args
+typing = { enabled = true, tool = "mypy", args = ["--ignore-missing-imports"] }
+```
+
+### imports
+
+Validates all imports can be resolved.
+
+```toml
+[tool.pycmdcheck.checks]
+imports = true  # No additional options
+```
+
+### license
+
+Checks for license file.
+
+```toml
+[tool.pycmdcheck.checks]
+license = true  # No additional options
+```
+
+Recognizes: `LICENSE`, `LICENSE.txt`, `LICENSE.md`, `LICENCE`, `COPYING`
+
+### docs
+
+Checks for documentation.
+
+```toml
+[tool.pycmdcheck.checks]
+docs = { enabled = true, require_readme = true }
+```
+
+**Options:**
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `require_readme` | boolean | `true` | Require README file |
+| `check_docstrings` | boolean | `false` | Check for docstrings |
+
+**Examples:**
+
+```toml
+# Basic (require README)
+docs = true
+
+# With docstring checking
+docs = { enabled = true, require_readme = true, check_docstrings = true }
+```
+
+## Complete Example
+
+```toml
+[tool.pycmdcheck]
+fail_on = ["error", "warning"]
+
+[tool.pycmdcheck.checks]
+metadata = true
+structure = true
+tests = { enabled = true, runner = "pytest" }
+linting = { enabled = true, tool = "ruff", args = ["--select", "E,F,W,I"] }
+typing = { enabled = true, tool = "mypy", strict = true }
+imports = true
+license = true
+docs = { enabled = true, require_readme = true, check_docstrings = false }
+```

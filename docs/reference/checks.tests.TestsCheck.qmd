@@ -1,0 +1,102 @@
+# checks.tests.TestsCheck { #pycmdcheck.checks.tests.TestsCheck }
+
+```python
+checks.tests.TestsCheck()
+```
+
+Run package tests and report results.
+
+Executes the package's test suite using the configured test runner
+(pytest by default) and reports pass/fail status. Supports pytest
+and unittest runners.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("tests").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+## Configuration Options {.doc-section .doc-section-configuration-options}
+
+runner (str): Test runner to use ("pytest" or "unittest").
+    Defaults to "pytest".
+args (list[str]): Additional arguments to pass to the test runner.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run tests with default settings (pytest):
+
+```python
+>>> from pathlib import Path
+>>> check = TestsCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'tests'
+```
+
+Configure to use unittest:
+
+```python
+>>> config = {"enabled": True, "runner": "unittest"}
+>>> result = check.run(Path("."), config)
+```
+
+Pass additional pytest arguments:
+
+```python
+>>> config = {"enabled": True, "args": ["-x", "--cov"]}
+>>> result = check.run(Path("."), config)
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.tests.TestsCheck.run) | Run tests and return results. |
+
+### run { #pycmdcheck.checks.tests.TestsCheck.run }
+
+```python
+checks.tests.TestsCheck.run(package_path, config)
+```
+
+Run tests and return results.
+
+Executes the test suite in the package's tests/ or test/ directory.
+The test runner is determined by the ``runner`` config option.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory containing tests.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary with options:  - runner (str): "pytest" or "unittest" (default: "pytest") - args (list[str]): Additional arguments for the runner
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if all tests pass
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if no tests found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - ERROR status if tests fail or runner not installed
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - SKIPPED status if the test runner is not installed

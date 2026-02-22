@@ -1,0 +1,89 @@
+# checks.license.LicenseCheck { #pycmdcheck.checks.license.LicenseCheck }
+
+```python
+checks.license.LicenseCheck()
+```
+
+Check that the package has a license file.
+
+Looks for common license file names (LICENSE, COPYING, etc.) and
+attempts to identify the license type (MIT, Apache, GPL, etc.).
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("license").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+<code>[**LICENSE_FILENAMES**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   List of recognized license file names.
+
+<code>[**KNOWN_LICENSES**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Dictionary mapping license identifiers to text markers used for identification.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run the license check:
+
+```python
+>>> from pathlib import Path
+>>> check = LicenseCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'license'
+```
+
+The check identifies common licenses:
+
+```python
+>>> # For a package with MIT license
+>>> # result.status == CheckStatus.OK
+>>> # "License type: MIT" in result.details
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.license.LicenseCheck.run) | Check for license file presence and validity. |
+
+### run { #pycmdcheck.checks.license.LicenseCheck.run }
+
+```python
+checks.license.LicenseCheck.run(package_path, config)
+```
+
+Check for license file presence and validity.
+
+Searches for a license file using common naming conventions,
+verifies it's not empty, and attempts to identify the license type.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for this check. Currently no check-specific options are used.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if a valid license file is found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if no license file found or file is empty

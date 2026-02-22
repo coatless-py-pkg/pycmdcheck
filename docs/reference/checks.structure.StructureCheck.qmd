@@ -1,0 +1,92 @@
+# checks.structure.StructureCheck { #pycmdcheck.checks.structure.StructureCheck }
+
+```python
+checks.structure.StructureCheck()
+```
+
+Check that package has a valid directory structure.
+
+Validates that the package follows one of the standard Python
+package layouts:
+
+- **src layout**: Package code in ``src/<package_name>/``
+- **flat layout**: Package code directly in project root
+
+The check verifies that package directories contain ``__init__.py``
+files and are properly structured.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**name**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   The check identifier ("structure").
+
+<code>[**description**]{.parameter-name} [:]{.parameter-annotation-sep} []{.parameter-annotation}</code>
+
+:   Human-readable description of this check.
+
+## Examples {.doc-section .doc-section-examples}
+
+Run the structure check:
+
+```python
+>>> from pathlib import Path
+>>> check = StructureCheck()
+>>> result = check.run(Path("."), {"enabled": True})
+>>> result.name
+'structure'
+```
+
+Check a package with src layout:
+
+```python
+>>> # For a package with src/mypackage/__init__.py
+>>> # result.status == CheckStatus.OK
+>>> # result.details contains "Using src layout"
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [run](#pycmdcheck.checks.structure.StructureCheck.run) | Check package directory structure. |
+
+### run { #pycmdcheck.checks.structure.StructureCheck.run }
+
+```python
+checks.structure.StructureCheck.run(package_path, config)
+```
+
+Check package directory structure.
+
+Determines the layout type (src or flat) and validates that
+the package directories are properly formed with ``__init__.py``
+files.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[Path](`pathlib.Path`)]{.parameter-annotation}</code>
+
+:   Path to the package directory to check.
+
+<code>[**config**]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   Configuration dictionary for this check. Currently no check-specific options are used.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   A CheckResult with:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - OK status if valid src or flat layout found
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - WARNING status if packages missing ``__init__.py``
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   - ERROR status if no package or module found

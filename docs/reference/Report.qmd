@@ -1,0 +1,178 @@
+# Report { #pycmdcheck.Report }
+
+```python
+Report(results=list(), package_path='')
+```
+
+Collection of check results for a package.
+
+A Report aggregates multiple CheckResult objects and provides
+methods for querying the overall status and summarizing results.
+
+## Attributes {.doc-section .doc-section-attributes}
+
+<code>[**results**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[CheckResult](`pycmdcheck.results.CheckResult`)\]]{.parameter-annotation}</code>
+
+:   List of CheckResult objects from running checks.
+
+<code>[**package_path**]{.parameter-name} [:]{.parameter-annotation-sep} [[str](`str`)]{.parameter-annotation}</code>
+
+:   Path to the package that was checked.
+
+## Examples {.doc-section .doc-section-examples}
+
+Create a report and add results:
+
+```python
+>>> report = Report(package_path="/path/to/package")
+>>> report.add(CheckResult("metadata", CheckStatus.OK, "Valid"))
+>>> report.add(CheckResult("tests", CheckStatus.OK, "Passed"))
+>>> report.passed
+True
+```
+
+Check for specific failure conditions:
+
+```python
+>>> report.failed_on(["error"])
+False
+>>> report.failed_on(["error", "warning"])
+False
+```
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [add](#pycmdcheck.Report.add) | Add a check result to the report. |
+| [count_by_status](#pycmdcheck.Report.count_by_status) | Count results by status. |
+| [failed_on](#pycmdcheck.Report.failed_on) | Check if any result matches the fail_on criteria. |
+| [to_dict](#pycmdcheck.Report.to_dict) | Convert to dictionary for JSON serialization. |
+
+### add { #pycmdcheck.Report.add }
+
+```python
+Report.add(result)
+```
+
+Add a check result to the report.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**result**]{.parameter-name} [:]{.parameter-annotation-sep} [[CheckResult](`pycmdcheck.results.CheckResult`)]{.parameter-annotation}</code>
+
+:   The CheckResult to add.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> report = Report()
+>>> report.add(CheckResult("test", CheckStatus.OK, "Passed"))
+>>> len(report.results)
+1
+```
+
+### count_by_status { #pycmdcheck.Report.count_by_status }
+
+```python
+Report.count_by_status()
+```
+
+Count results by status.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[CheckStatus](`pycmdcheck.results.CheckStatus`), [int](`int`)\]]{.parameter-annotation}</code>
+
+:   A dictionary mapping each CheckStatus to the count of results
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[CheckStatus](`pycmdcheck.results.CheckStatus`), [int](`int`)\]]{.parameter-annotation}</code>
+
+:   with that status.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> report = Report()
+>>> report.add(CheckResult("a", CheckStatus.OK, "OK"))
+>>> report.add(CheckResult("b", CheckStatus.OK, "OK"))
+>>> report.add(CheckResult("c", CheckStatus.WARNING, "Warn"))
+>>> counts = report.count_by_status()
+>>> counts[CheckStatus.OK]
+2
+>>> counts[CheckStatus.WARNING]
+1
+```
+
+### failed_on { #pycmdcheck.Report.failed_on }
+
+```python
+Report.failed_on(fail_on)
+```
+
+Check if any result matches the fail_on criteria.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+<code>[**fail_on**]{.parameter-name} [:]{.parameter-annotation-sep} [[list](`list`)\[[str](`str`)\]]{.parameter-annotation}</code>
+
+:   List of status values to consider as failures (e.g., ["error", "warning"]).
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[bool](`bool`)]{.parameter-annotation}</code>
+
+:   True if any result has a status in the fail_on list.
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> report = Report()
+>>> report.add(CheckResult("test", CheckStatus.WARNING, "Warn"))
+>>> report.failed_on(["error"])
+False
+>>> report.failed_on(["error", "warning"])
+True
+```
+
+### to_dict { #pycmdcheck.Report.to_dict }
+
+```python
+Report.to_dict()
+```
+
+Convert to dictionary for JSON serialization.
+
+#### Returns {.doc-section .doc-section-returns}
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   A dictionary containing:
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   - package_path: The path that was checked
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   - passed: Whether all checks passed
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   - summary: Count of each status
+
+<code>[]{.parameter-name} [:]{.parameter-annotation-sep} [[dict](`dict`)\[[str](`str`), [Any](`typing.Any`)\]]{.parameter-annotation}</code>
+
+:   - results: List of result dictionaries
+
+#### Examples {.doc-section .doc-section-examples}
+
+```python
+>>> report = Report(package_path="/pkg")
+>>> report.add(CheckResult("test", CheckStatus.OK, "OK"))
+>>> data = report.to_dict()
+>>> data["passed"]
+True
+>>> data["summary"]["ok"]
+1
+```
