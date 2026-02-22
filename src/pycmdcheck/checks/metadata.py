@@ -25,6 +25,7 @@ class MetadataCheck(BaseCheck):
         description: Human-readable description of this check.
         REQUIRED_FIELDS: List of fields that must be present in [project].
         RECOMMENDED_FIELDS: List of fields that should be present.
+        EXTENDED_FIELDS: List of extended fields checked for completeness.
 
     Examples:
         Run the metadata check on a package:
@@ -46,6 +47,7 @@ class MetadataCheck(BaseCheck):
 
     REQUIRED_FIELDS = ["name", "version"]
     RECOMMENDED_FIELDS = ["description", "readme", "license", "requires-python"]
+    EXTENDED_FIELDS = ["authors", "urls", "classifiers"]
 
     def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
         """Check package metadata for validity and completeness.
@@ -143,10 +145,21 @@ class MetadataCheck(BaseCheck):
             details.append(
                 f"Missing recommended fields: {', '.join(missing_recommended)}"
             )
+            self._check_extended_fields(project, pyproject, details)
             return CheckResult(
                 name=self.name,
                 status=CheckStatus.NOTE,
                 message="Some recommended metadata fields are missing",
+                details=details,
+            )
+
+        self._check_extended_fields(project, pyproject, details)
+
+        if any("missing extended" in d.lower() for d in details):
+            return CheckResult(
+                name=self.name,
+                status=CheckStatus.NOTE,
+                message="Some extended metadata fields are missing",
                 details=details,
             )
 
@@ -157,3 +170,40 @@ class MetadataCheck(BaseCheck):
             message="Package metadata is valid",
             details=details,
         )
+
+    def _check_extended_fields(
+        self,
+        project: dict[str, Any],
+        pyproject: dict[str, Any],
+        details: list[str],
+    ) -> None:
+        """Check extended metadata fields and append notes to details.
+
+        Validates that ``authors``, ``classifiers``, and ``[project.urls]``
+        are present and non-empty.  Missing or empty fields are reported as
+        a single NOTE-level detail line.
+
+        Args:
+            project: The ``[project]`` table from pyproject.toml.
+            pyproject: The full parsed pyproject.toml dictionary.
+            details: Mutable list to which detail strings are appended.
+        """
+        missing: list[str] = []
+
+        # authors: must be a non-empty list
+        authors = project.get("authors")
+        if not authors or not isinstance(authors, list) or len(authors) == 0:
+            missing.append("authors")
+
+        # urls: the [project.urls] table must exist with at least one entry
+        urls = project.get("urls")
+        if not urls or not isinstance(urls, dict) or len(urls) == 0:
+            missing.append("urls")
+
+        # classifiers: must be a non-empty list
+        classifiers = project.get("classifiers")
+        if not classifiers or not isinstance(classifiers, list):
+            missing.append("classifiers")
+
+        if missing:
+            details.append(f"Missing extended metadata fields: {', '.join(missing)}")

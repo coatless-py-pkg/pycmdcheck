@@ -7,6 +7,7 @@ for docstrings in the code.
 
 import ast
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,11 @@ class DocsCheck(BaseCheck):
         require_readme (bool): Whether README is required. Defaults to True.
         check_docstrings (bool): Whether to check for docstrings in code.
             Defaults to False.
+        check_readme_sections (bool): Whether to check for common README
+            sections (Installation, Usage). Defaults to False.
+        min_docstring_coverage (float): Minimum docstring coverage percentage
+            (0.0-100.0). When > 0 and coverage is below threshold, an issue
+            is reported. Defaults to 0.0 (disabled).
 
     Examples:
         Run the docs check with defaults:
@@ -77,6 +83,10 @@ class DocsCheck(BaseCheck):
 
                 - require_readme (bool): Require README (default: True)
                 - check_docstrings (bool): Check code docstrings (default: False)
+                - check_readme_sections (bool): Check for common README
+                  sections (default: False)
+                - min_docstring_coverage (float): Minimum coverage %
+                  (default: 0.0, disabled)
 
         Returns:
             A CheckResult with:
@@ -92,10 +102,15 @@ class DocsCheck(BaseCheck):
         require_readme = config.get("require_readme", True)
         readme_found = self._check_readme(package_path, details, issues, require_readme)
 
+        # Check README sections (opt-in)
+        if config.get("check_readme_sections", False) and readme_found:
+            self._check_readme_sections(package_path, details, issues)
+
         # Check for docstrings (optional)
         check_docstrings = config.get("check_docstrings", False)
         if check_docstrings:
-            self._check_docstrings(package_path, details, issues)
+            min_coverage = config.get("min_docstring_coverage", 0.0)
+            self._check_docstrings(package_path, details, issues, min_coverage)
 
         # Determine status
         if issues and require_readme and not readme_found:
@@ -153,11 +168,53 @@ class DocsCheck(BaseCheck):
             issues.append("No README file found")
         return False
 
+    def _check_readme_sections(
+        self,
+        package_path: Path,
+        details: list[str],
+        issues: list[str],
+    ) -> None:
+        """Check that the README contains common sections.
+
+        Looks for headings (Markdown ``#`` or ``##`` style) that contain
+        keywords for Installation and Usage/Quickstart sections.
+        """
+        readme_content = ""
+        for filename in self.README_FILENAMES:
+            readme_path = package_path / filename
+            if readme_path.exists():
+                try:
+                    readme_content = readme_path.read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError) as exc:
+                    logger.debug("Could not read README %s: %s", readme_path, exc)
+                break
+
+        if not readme_content:
+            return
+
+        # Extract headings (lines starting with one or more '#')
+        headings = [
+            line.lstrip("#").strip().lower()
+            for line in readme_content.splitlines()
+            if re.match(r"^#{1,6}\s", line)
+        ]
+
+        expected_sections = {
+            "Installation": "install",
+            "Usage": "usage|quickstart|getting started",
+        }
+
+        for section_name, pattern in expected_sections.items():
+            found = any(re.search(pattern, h) for h in headings)
+            if not found:
+                issues.append(f"README missing section: {section_name}")
+
     def _check_docstrings(
         self,
         package_path: Path,
         details: list[str],
         issues: list[str],
+        min_coverage: float = 0.0,
     ) -> None:
         """Check for docstrings in public modules and functions."""
         # Find Python files
@@ -168,10 +225,12 @@ class DocsCheck(BaseCheck):
         py_files = [f for f in py_files if not f.name.startswith("test_")]
 
         missing_docstrings: list[str] = []
+        total_public_items = 0
 
         for py_file in py_files[:MAX_DOCSTRING_FILES]:  # Limit to first N files
             try:
-                missing = self._check_file_docstrings(py_file)
+                total, missing = self._check_file_docstrings_counted(py_file)
+                total_public_items += total
                 missing_docstrings.extend(missing)
             except (OSError, UnicodeDecodeError) as exc:
                 logger.debug("Could not parse %s: %s", py_file, exc)
@@ -187,14 +246,45 @@ class DocsCheck(BaseCheck):
         else:
             details.append("All public items have docstrings")
 
+        # Report coverage percentage
+        documented = total_public_items - len(missing_docstrings)
+        if total_public_items > 0:
+            pct = documented / total_public_items * 100
+            details.append(
+                f"Docstring coverage: {documented}/{total_public_items}"
+                f" public items ({pct:.0f}%)"
+            )
+
+            # Check minimum coverage threshold
+            if min_coverage > 0 and pct < min_coverage:
+                issues.append(
+                    f"Docstring coverage {pct:.0f}% is below"
+                    f" minimum {min_coverage:.0f}%"
+                )
+        else:
+            details.append("Docstring coverage: 0/0 public items (100%)")
+
     def _check_file_docstrings(self, py_file: Path) -> list[str]:
         """Check docstrings in a single Python file."""
+        _total, missing = self._check_file_docstrings_counted(py_file)
+        return missing
+
+    def _check_file_docstrings_counted(self, py_file: Path) -> tuple[int, list[str]]:
+        """Check docstrings in a single Python file.
+
+        Returns:
+            A tuple of (total_public_items, missing_items) where
+            *total_public_items* is the count of public items inspected
+            and *missing_items* is the list of items without docstrings.
+        """
         tree = parse_file(py_file)
         if tree is None:
-            return []
+            return 0, []
         missing: list[str] = []
+        total = 0
 
         # Check module docstring
+        total += 1
         if not ast.get_docstring(tree):
             missing.append(f"{py_file.name}: module")
 
@@ -202,13 +292,15 @@ class DocsCheck(BaseCheck):
             # Check class docstrings
             if isinstance(node, ast.ClassDef):
                 if not node.name.startswith("_"):
+                    total += 1
                     if not ast.get_docstring(node):
                         missing.append(f"{py_file.name}: class {node.name}")
 
             # Check function docstrings
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if not node.name.startswith("_"):
+                    total += 1
                     if not ast.get_docstring(node):
                         missing.append(f"{py_file.name}: function {node.name}")
 
-        return missing
+        return total, missing

@@ -57,6 +57,13 @@ build = "pycmdcheck.checks.build:BuildCheck"
 formatting = "pycmdcheck.checks.formatting:FormattingCheck"
 version = "pycmdcheck.checks.version:VersionCheck"
 py_typed = "pycmdcheck.checks.py_typed:PyTypedCheck"
+community = "pycmdcheck.checks.community:CommunityCheck"
+ci = "pycmdcheck.checks.ci:CICheck"
+changelog = "pycmdcheck.checks.changelog:ChangelogCheck"
+citation = "pycmdcheck.checks.citation:CitationCheck"
+python_versions = "pycmdcheck.checks.python_versions:PythonVersionsCheck"
+urls = "pycmdcheck.checks.urls:URLsCheck"
+doctests = "pycmdcheck.checks.doctests:DoctestsCheck"
 
 [project.urls]
 Homepage = "https://github.com/pycmdcheck/pycmdcheck"

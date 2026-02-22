@@ -156,6 +156,9 @@ class DependenciesCheck(BaseCheck):
         if unused:
             details.append(f"Unused dependencies: {', '.join(sorted(unused)[:10])}")
 
+        # Check for unbounded version specifiers (informational only)
+        self._check_version_bounds(raw_deps, details)
+
         if undeclared:
             return CheckResult(
                 name=self.name,
@@ -199,6 +202,26 @@ class DependenciesCheck(BaseCheck):
                         imports.add(node.module.split(".")[0])
 
         return imports
+
+    def _check_version_bounds(self, raw_deps: list[str], details: list[str]) -> None:
+        """Append a NOTE-level detail if any dependencies lack version bounds.
+
+        A dependency is considered unbounded if its raw string contains no
+        version specifier characters (>=, <=, ==, !=, ~=, <, >).
+        """
+        version_pattern = re.compile(r"[><=!~]=?")
+        unbounded: list[str] = []
+        for dep in raw_deps:
+            # Strip environment markers before checking
+            dep_no_markers = dep.split(";")[0].strip()
+            if not version_pattern.search(dep_no_markers):
+                # Extract bare package name (strip extras like [extra])
+                name = re.split(r"[\[\s]", dep_no_markers)[0].strip()
+                unbounded.append(name)
+        if unbounded:
+            details.append(
+                f"NOTE: Unbounded dependencies: {', '.join(sorted(unbounded))}"
+            )
 
 
 def _strip_version_specifier(dep: str) -> str:

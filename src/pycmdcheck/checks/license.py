@@ -9,6 +9,7 @@ from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
 from pycmdcheck.constants import MIN_LICENSE_LENGTH
+from pycmdcheck.pyproject_reader import get_project_table
 from pycmdcheck.results import CheckResult, CheckStatus
 
 
@@ -43,6 +44,35 @@ class LicenseCheck(BaseCheck):
 
     name = "license"
     description = "Check for license file"
+
+    OSI_APPROVED_SPDX: set[str] = {
+        "MIT",
+        "Apache-2.0",
+        "GPL-2.0-only",
+        "GPL-2.0-or-later",
+        "GPL-3.0-only",
+        "GPL-3.0-or-later",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "ISC",
+        "MPL-2.0",
+        "LGPL-2.1-only",
+        "LGPL-2.1-or-later",
+        "LGPL-3.0-only",
+        "LGPL-3.0-or-later",
+        "EUPL-1.2",
+        "Artistic-2.0",
+        "Zlib",
+        "PSF-2.0",
+        "BSL-1.0",
+        "Unlicense",
+        "0BSD",
+        # Common short forms also accepted
+        "GPL-2.0",
+        "GPL-3.0",
+        "LGPL-2.1",
+        "LGPL-3.0",
+    }
 
     LICENSE_FILENAMES = [
         "LICENSE",
@@ -135,6 +165,9 @@ class LicenseCheck(BaseCheck):
                 details=details,
             )
 
+        # OSI-approved license validation
+        self._check_osi_status(package_path, license_type, details)
+
         return CheckResult(
             name=self.name,
             status=CheckStatus.OK,
@@ -151,3 +184,41 @@ class LicenseCheck(BaseCheck):
                 return license_name
 
         return None
+
+    def _check_osi_status(
+        self,
+        package_path: Path,
+        license_type: str | None,
+        details: list[str],
+    ) -> None:
+        """Add OSI-approved status details based on pyproject.toml and content scan.
+
+        This checks both the SPDX identifier declared in ``pyproject.toml``
+        and the license type identified from the file content against the
+        :attr:`OSI_APPROVED_SPDX` set.  Results are appended to *details*
+        without changing the overall check status.
+        """
+        # Check the content-scanned license type against OSI set
+        if license_type and license_type in self.OSI_APPROVED_SPDX:
+            details.append(f"License is OSI-approved ({license_type})")
+            return
+
+        # Check the SPDX identifier from pyproject.toml
+        project = get_project_table(package_path)
+        spdx = project.get("license")
+
+        if spdx is None:
+            return
+
+        # The license field can be a string (SPDX) or a table
+        if isinstance(spdx, dict):
+            spdx = spdx.get("text") or spdx.get("file")
+            if spdx is None:
+                return
+
+        if spdx in self.OSI_APPROVED_SPDX:
+            details.append("License is OSI-approved")
+        else:
+            details.append(
+                "NOTE: License SPDX identifier not recognized as OSI-approved"
+            )

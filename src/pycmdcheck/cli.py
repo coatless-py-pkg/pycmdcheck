@@ -10,7 +10,9 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from pycmdcheck.config import load_config
 from pycmdcheck.discovery import list_available_checks
+from pycmdcheck.profiles import get_profile, list_profiles
 from pycmdcheck.results import CheckStatus, Report
 from pycmdcheck.runner import run_checks
 
@@ -68,6 +70,18 @@ console = Console()
     is_flag=True,
     help="Stop after first check failure.",
 )
+@click.option(
+    "--profile",
+    type=click.Choice(["minimal", "default", "pyopensci", "strict"]),
+    default=None,
+    help="Use a predefined check profile.",
+)
+@click.option(
+    "--list-profiles",
+    "list_profiles_flag",
+    is_flag=True,
+    help="List available profiles and exit.",
+)
 @click.option("--debug", is_flag=True, help="Enable debug logging output.")
 @click.version_option(package_name="pycmdcheck")
 def main(
@@ -80,6 +94,8 @@ def main(
     json_output: bool,
     no_parallel: bool,
     fail_fast: bool,
+    profile: str | None,
+    list_profiles_flag: bool,
     debug: bool,
 ) -> None:
     """Check Python package quality.
@@ -104,9 +120,23 @@ def main(
             format="%(name)s: %(message)s",
         )
 
+    if list_profiles_flag:
+        _show_profiles()
+        return
+
     if list_checks:
         _show_available_checks()
         return
+
+    # Resolve profile
+    profile_config: dict[str, dict[str, object]] = {}
+    if profile:
+        prof = get_profile(profile)
+        if prof:
+            profile_config = prof.config_overrides
+            if not check:
+                # Use profile's check set (converted to tuple for consistency)
+                check = tuple(sorted(prof.checks))
 
     # Validate check names
     if check:
@@ -124,7 +154,21 @@ def main(
     package_path = Path(path).resolve()
 
     if not json_output:
-        console.print(f"\n[bold]Checking package:[/bold] {package_path}\n")
+        profile_label = f" (profile: {profile})" if profile else ""
+        console.print(
+            f"\n[bold]Checking package:[/bold] {package_path}{profile_label}\n"
+        )
+
+    # Load config from pyproject.toml and merge profile overrides
+    merged_config = load_config(package_path)
+    if profile_config:
+        checks_section = merged_config.setdefault("checks", {})
+        for check_name, overrides in profile_config.items():
+            existing = checks_section.get(check_name, {})
+            if isinstance(existing, bool):
+                existing = {"enabled": existing}
+            existing.update(overrides)
+            checks_section[check_name] = existing
 
     # Run checks
     if not json_output and console.is_terminal:
@@ -133,6 +177,7 @@ def main(
                 package_path=package_path,
                 checks=list(check) if check else None,
                 skip=list(skip),
+                config=merged_config,
                 parallel=not no_parallel,
                 fail_fast=fail_fast,
             )
@@ -141,6 +186,7 @@ def main(
             package_path=package_path,
             checks=list(check) if check else None,
             skip=list(skip),
+            config=merged_config,
             parallel=not no_parallel,
             fail_fast=fail_fast,
         )
@@ -154,6 +200,21 @@ def main(
     # Determine exit code
     if report.failed_on(list(fail_on)):
         sys.exit(1)
+
+
+def _show_profiles(con: Console | None = None) -> None:
+    """Display list of available profiles."""
+    con = con or console
+    profiles = list_profiles()
+
+    table = Table(title="Available Profiles")
+    table.add_column("Name", style="cyan")
+    table.add_column("Description")
+
+    for name, description in profiles:
+        table.add_row(name, description)
+
+    con.print(table)
 
 
 def _show_available_checks(con: Console | None = None) -> None:
