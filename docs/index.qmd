@@ -52,19 +52,14 @@ else:
 
 ## Installation
 
-::: {.callout-note}
-pycmdcheck is not yet published to PyPI. Install it directly from GitHub for
-now. Once it is released, `pip install pycmdcheck` will work too.
-:::
-
 ```bash
-pip install git+https://github.com/coatless-py-pkg/pycmdcheck
+pip install pycmdcheck
 ```
 
 Or with uv:
 
 ```bash
-uv pip install git+https://github.com/coatless-py-pkg/pycmdcheck
+uv add pycmdcheck
 ```
 
 ## Next Steps

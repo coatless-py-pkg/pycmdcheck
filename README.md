@@ -4,40 +4,30 @@ A Python package quality checker inspired by R's `R CMD check`.
 
 ## Installation
 
-> **Note:** pycmdcheck is not yet published to PyPI. Install it directly from
-> GitHub for now. Once it is released, `pip install pycmdcheck` will work too.
-
 ```bash
-pip install git+https://github.com/coatless-py-pkg/pycmdcheck
+pip install pycmdcheck
 ```
 
 Or with uv:
 
 ```bash
-uv pip install git+https://github.com/coatless-py-pkg/pycmdcheck
+uv add pycmdcheck
 ```
-
-To pin a specific branch, tag, or commit, append `@<ref>` to the URL — for
-example `git+https://github.com/coatless-py-pkg/pycmdcheck@main`.
 
 ### Optional dependencies
 
-pycmdcheck can use external tools for linting and type checking. Request the
-matching extra in the install command. For a GitHub install, the extra goes in
-the PEP 508 `pycmdcheck[extra] @ <url>` form:
-
 ```bash
 # For mypy type checking
-pip install "pycmdcheck[typing-mypy] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
+pip install pycmdcheck[typing-mypy]
 
 # For pyright type checking
-pip install "pycmdcheck[typing-pyright] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
+pip install pycmdcheck[typing-pyright]
 
 # For ruff linting
-pip install "pycmdcheck[linting] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
+pip install pycmdcheck[linting]
 
 # All optional dependencies
-pip install "pycmdcheck[all] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
+pip install pycmdcheck[all]
 ```
 
 ## Usage
