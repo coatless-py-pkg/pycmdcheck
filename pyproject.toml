@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pycmdcheck"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python package quality checker inspired by R CMD check"
 readme = "README.md"
 license = "MIT"
@@ -67,9 +67,9 @@ urls = "pycmdcheck.checks.urls:URLsCheck"
 doctests = "pycmdcheck.checks.doctests:DoctestsCheck"
 
 [project.urls]
-Homepage = "https://github.com/pycmdcheck/pycmdcheck"
-Repository = "https://github.com/pycmdcheck/pycmdcheck"
-Issues = "https://github.com/pycmdcheck/pycmdcheck/issues"
+Homepage = "https://github.com/coatless-py-pkg/pycmdcheck"
+Repository = "https://github.com/coatless-py-pkg/pycmdcheck"
+Issues = "https://github.com/coatless-py-pkg/pycmdcheck/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pycmdcheck"]

@@ -21,7 +21,7 @@ website:
         href: changelog.qmd
     right:
       - icon: github
-        href: https://github.com/pycmdcheck/pycmdcheck
+        href: https://github.com/coatless-py-pkg/pycmdcheck
 
 format:
   html:
