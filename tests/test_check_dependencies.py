@@ -14,6 +14,48 @@ class TestDependenciesCheck:
         result = check.run(empty_dir, {})
         assert result.status == CheckStatus.NOTE
 
+    def test_pyproject_without_project_table(self, tmp_path: Path) -> None:
+        """pyproject present but no [project]/[tool.poetry] -> clear NOTE (#16)."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[build-system]\nrequires = ["setuptools"]\n'
+        )
+        check = DependenciesCheck()
+        result = check.run(tmp_path, {})
+        assert result.status == CheckStatus.NOTE
+        assert "project" in result.message.lower()
+
+    def test_extra_import_not_undeclared(self, tmp_path: Path) -> None:
+        """Importing an extra-declared library is not flagged undeclared (#3)."""
+        pkg = tmp_path / "src" / "mypkg"
+        pkg.mkdir(parents=True)
+        (pkg / "__init__.py").write_text("import click\nimport rich\n")
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
+            'dependencies = ["click>=8.0"]\n\n'
+            "[project.optional-dependencies]\n"
+            'pretty = ["rich>=13.0"]\n'
+        )
+        check = DependenciesCheck()
+        result = check.run(tmp_path, {})
+        assert result.status != CheckStatus.WARNING
+        assert not any(
+            "undeclared" in d.lower() and "rich" in d.lower() for d in result.details
+        )
+
+    def test_single_module_source_scanned(self, tmp_path: Path) -> None:
+        """A single-module package's imports are scanned, not all deps unused (#15)."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
+            'dependencies = ["click>=8.0"]\n'
+        )
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "mypkg.py").write_text("import click\n")
+        check = DependenciesCheck()
+        result = check.run(tmp_path, {})
+        assert result.status == CheckStatus.OK
+        assert not any("unused" in d.lower() for d in result.details)
+
     def test_no_dependencies_declared(self, tmp_path: Path) -> None:
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "test"\nversion = "0.1.0"\n'

@@ -40,6 +40,27 @@ class TestDocsReadmeSections:
         result = check.run(temp_package, {"check_readme_sections": True})
         assert result.status == CheckStatus.OK
 
+    def test_rst_readme_sections_recognized(self, tmp_path: Path) -> None:
+        """RST README with underline headings is not falsely flagged (#11)."""
+        pkg = tmp_path / "src" / "mypkg"
+        pkg.mkdir(parents=True)
+        (pkg / "__init__.py").write_text("")
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
+        )
+        (tmp_path / "README.rst").write_text(
+            "My Package\n==========\n\n"
+            "A useful library for developers that need to validate Python "
+            "project structure and documentation in an automated fashion.\n\n"
+            "Installation\n------------\n\n"
+            "    pip install mypkg\n\n"
+            "Quick Start\n-----------\n\n"
+            "    import mypkg\n"
+        )
+        check = DocsCheck()
+        result = check.run(tmp_path, {"check_readme_sections": True})
+        assert not any("README missing section" in d for d in result.details)
+
     def test_readme_missing_sections(self, temp_package: Path) -> None:
         """README without install/usage sections -> details note them."""
         readme = temp_package / "README.md"

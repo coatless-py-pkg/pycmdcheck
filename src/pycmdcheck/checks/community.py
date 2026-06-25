@@ -58,14 +58,14 @@ class CommunityCheck(BaseCheck):
         # Check for CONTRIBUTING
         contributing = self._find_file(package_path, self.CONTRIBUTING_FILENAMES)
         if contributing:
-            details.append(f"Found: {contributing.name}")
+            details.append(f"Found: {self._rel(package_path, contributing)}")
         else:
             missing.append("CONTRIBUTING.md")
 
         # Check for CODE_OF_CONDUCT
         coc = self._find_file(package_path, self.CODE_OF_CONDUCT_FILENAMES)
         if coc:
-            details.append(f"Found: {coc.name}")
+            details.append(f"Found: {self._rel(package_path, coc)}")
         else:
             missing.append("CODE_OF_CONDUCT.md")
 
@@ -85,10 +85,24 @@ class CommunityCheck(BaseCheck):
             details=details,
         )
 
+    # GitHub resolves community-health files from the repo root, .github/, and
+    # docs/ (in that order). Mirror that so files in those locations count.
+    SEARCH_DIRS = ("", ".github", "docs")
+
     def _find_file(self, package_path: Path, filenames: list[str]) -> Path | None:
-        """Find a file matching one of the given filenames."""
-        for filename in filenames:
-            candidate = package_path / filename
-            if candidate.exists():
-                return candidate
+        """Find a community file in the root, ``.github/``, or ``docs/``."""
+        for subdir in self.SEARCH_DIRS:
+            base = package_path / subdir if subdir else package_path
+            for filename in filenames:
+                candidate = base / filename
+                if candidate.exists():
+                    return candidate
         return None
+
+    @staticmethod
+    def _rel(package_path: Path, path: Path) -> str:
+        """Return *path* relative to *package_path* for display."""
+        try:
+            return str(path.relative_to(package_path))
+        except ValueError:
+            return path.name

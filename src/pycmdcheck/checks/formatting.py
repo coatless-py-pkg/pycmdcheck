@@ -5,6 +5,7 @@ from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
 from pycmdcheck.constants import DEFAULT_TIMEOUT, MAX_DETAIL_LINES
+from pycmdcheck.pyproject_reader import read_pyproject
 from pycmdcheck.results import CheckResult, CheckStatus
 from pycmdcheck.subprocess_runner import run_tool, sanitize_args, tool_available
 
@@ -18,8 +19,29 @@ class FormattingCheck(BaseCheck):
     SUPPORTED_TOOLS = ["ruff", "black"]
 
     def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
-        """Run formatting check."""
-        tool = config.get("tool", "ruff")
+        """Run formatting check.
+
+        The formatter defaults to ``"auto"``: the package's configured
+        formatter is detected from pyproject.toml / ``ruff.toml``. A package
+        that has not opted into a formatter is SKIPPED rather than being held
+        to one tool's default style (pyOpenSci does not mandate a specific
+        formatter).
+        """
+        tool = config.get("tool", "auto")
+
+        if tool == "auto":
+            detected = self._detect_formatter(package_path)
+            if detected is None:
+                return CheckResult(
+                    name=self.name,
+                    status=CheckStatus.SKIPPED,
+                    message="No formatter configured",
+                    details=[
+                        "No [tool.ruff]/[tool.black] config or ruff.toml found; "
+                        "skipping formatting check"
+                    ],
+                )
+            tool = detected
 
         if tool not in self.SUPPORTED_TOOLS:
             return CheckResult(
@@ -33,6 +55,25 @@ class FormattingCheck(BaseCheck):
             return self._run_ruff_format(package_path, config)
         else:
             return self._run_black(package_path, config)
+
+    @staticmethod
+    def _detect_formatter(package_path: Path) -> str | None:
+        """Detect the formatter a package has opted into, or ``None``.
+
+        Returns ``"ruff"`` if ``[tool.ruff]`` / ``ruff.toml`` is present,
+        ``"black"`` if ``[tool.black]`` is present, otherwise ``None``.
+        """
+        if (package_path / "ruff.toml").exists() or (
+            package_path / ".ruff.toml"
+        ).exists():
+            return "ruff"
+        data = read_pyproject(package_path)
+        tool_table = data.get("tool", {}) if data else {}
+        if "ruff" in tool_table:
+            return "ruff"
+        if "black" in tool_table:
+            return "black"
+        return None
 
     def _run_ruff_format(
         self, package_path: Path, config: dict[str, Any]

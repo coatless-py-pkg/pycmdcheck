@@ -51,3 +51,24 @@ class TestCommunityCheck:
         check = CommunityCheck()
         result = check.run(temp_package, {})
         assert result.status == CheckStatus.OK
+
+    def test_files_in_dot_github(self, temp_package: Path) -> None:
+        """Community files under .github/ are recognized (GitHub convention)."""
+        gh = temp_package / ".github"
+        gh.mkdir()
+        (gh / "CONTRIBUTING.md").write_text("# Contributing\n")
+        (gh / "CODE_OF_CONDUCT.md").write_text("# Code of Conduct\n")
+        check = CommunityCheck()
+        result = check.run(temp_package, {})
+        assert result.status == CheckStatus.OK
+        assert any(".github" in d for d in result.details)
+
+    def test_files_in_docs(self, temp_package: Path) -> None:
+        """Community files under docs/ are recognized."""
+        docs = temp_package / "docs"
+        docs.mkdir()
+        (docs / "CONTRIBUTING.md").write_text("# Contributing\n")
+        (docs / "CODE_OF_CONDUCT.md").write_text("# Code of Conduct\n")
+        check = CommunityCheck()
+        result = check.run(temp_package, {})
+        assert result.status == CheckStatus.OK

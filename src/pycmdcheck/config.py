@@ -25,7 +25,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "docs": True,
         "dependencies": True,
         "build": True,
-        "formatting": {"enabled": True, "tool": "ruff"},
+        "formatting": {"enabled": True, "tool": "auto"},
         "version": True,
         "py_typed": True,
     },

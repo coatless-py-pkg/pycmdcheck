@@ -16,6 +16,54 @@ class TestFormattingCheck:
         result = check.run(temp_package, {"tool": "unsupported"})
         assert result.status == CheckStatus.ERROR
 
+    def test_auto_no_formatter_configured_skips(self, tmp_path: Path) -> None:
+        """tool='auto' with no [tool.ruff]/[tool.black] -> SKIPPED, not ruff (#12)."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "pkg"\nversion = "0.1.0"\n'
+        )
+        check = FormattingCheck()
+        result = check.run(tmp_path, {"tool": "auto"})
+        assert result.status == CheckStatus.SKIPPED
+        assert "no formatter" in result.message.lower()
+
+    def test_auto_detects_black(self, tmp_path: Path) -> None:
+        """tool='auto' with [tool.black] uses black, not ruff (#12)."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "pkg"\nversion = "0.1.0"\n\n'
+            "[tool.black]\nline-length = 88\n"
+        )
+        check = FormattingCheck()
+        with (
+            patch(
+                "pycmdcheck.subprocess_runner.shutil.which",
+                return_value="/usr/bin/black",
+            ),
+            patch("pycmdcheck.subprocess_runner.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = check.run(tmp_path, {"tool": "auto"})
+        assert result.status == CheckStatus.OK
+        assert any("black" in d.lower() for d in result.details)
+
+    def test_auto_detects_ruff(self, tmp_path: Path) -> None:
+        """tool='auto' with [tool.ruff] uses ruff (#12)."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "pkg"\nversion = "0.1.0"\n\n'
+            "[tool.ruff]\nline-length = 88\n"
+        )
+        check = FormattingCheck()
+        with (
+            patch(
+                "pycmdcheck.subprocess_runner.shutil.which",
+                return_value="/usr/bin/ruff",
+            ),
+            patch("pycmdcheck.subprocess_runner.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            result = check.run(tmp_path, {"tool": "auto"})
+        assert result.status == CheckStatus.OK
+        assert any("ruff" in d.lower() for d in result.details)
+
     def test_ruff_not_installed(self, temp_package: Path) -> None:
         check = FormattingCheck()
         with patch("pycmdcheck.subprocess_runner.shutil.which", return_value=None):

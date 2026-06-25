@@ -138,6 +138,13 @@ class LintingCheck(BaseCheck):
         issues = result.output_lines()
         issue_count = len(issues)
 
+        # A tool/config/usage failure (ruff exit code >= 2, or a non-zero exit
+        # with no parsable issues on stdout) is NOT a code-quality finding —
+        # surface the real error instead of "Found 0 linting issue(s)".
+        tool_error = self._tool_failure(result, "ruff", issue_count)
+        if tool_error is not None:
+            return tool_error
+
         details = [*preamble, *issues[:MAX_DETAIL_LINES]]
 
         if issue_count > MAX_DETAIL_LINES:
@@ -148,6 +155,28 @@ class LintingCheck(BaseCheck):
             status=CheckStatus.WARNING,
             message=f"Found {issue_count} linting issue(s)",
             details=details,
+        )
+
+    def _tool_failure(
+        self, result: Any, tool: str, issue_count: int
+    ) -> CheckResult | None:
+        """Return an ERROR result if the linter failed to run, else ``None``.
+
+        Treats an exit code >= 2 (ruff/flake8 configuration or usage error) or
+        a non-zero exit that produced no parsable issues but did write to stderr
+        as a tool failure rather than a lint finding.
+        """
+        is_config_error = result.returncode >= 2
+        stderr = (result.stderr or "").strip()
+        no_issues_but_stderr = issue_count == 0 and bool(stderr)
+        if not (is_config_error or no_issues_but_stderr):
+            return None
+        detail_lines = (result.output or "").strip().splitlines()
+        return CheckResult(
+            name=self.name,
+            status=CheckStatus.ERROR,
+            message=f"{tool} failed to run (configuration or usage error)",
+            details=[f"Using linter: {tool}", *detail_lines[:MAX_DETAIL_LINES]],
         )
 
     def _run_flake8(
@@ -193,6 +222,10 @@ class LintingCheck(BaseCheck):
 
         issues = result.output_lines()
         issue_count = len(issues)
+
+        tool_error = self._tool_failure(result, "flake8", issue_count)
+        if tool_error is not None:
+            return tool_error
 
         details = [*preamble, *issues[:MAX_DETAIL_LINES]]
 

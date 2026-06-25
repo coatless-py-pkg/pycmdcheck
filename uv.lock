@@ -600,6 +600,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "packaging" },
     { name = "rich" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
@@ -632,6 +633,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.0" },
     { name = "mypy", marker = "extra == 'all'", specifier = ">=1.0" },
     { name = "mypy", marker = "extra == 'typing-mypy'", specifier = ">=1.0" },
+    { name = "packaging", specifier = ">=21.0" },
     { name = "pyright", marker = "extra == 'all'", specifier = ">=1.1" },
     { name = "pyright", marker = "extra == 'typing-pyright'", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },

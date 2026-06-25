@@ -19,6 +19,20 @@ class TestDoctestsCheck:
         assert result.status == CheckStatus.SKIPPED
         assert result.name == "doctests"
 
+    def test_exit_code_5_is_no_doctests(self, temp_package: Path) -> None:
+        """pytest exit code 5 (nothing collected) -> OK, not a false failure (#5)."""
+        check = DoctestsCheck()
+        with (
+            patch("pycmdcheck.checks.doctests.tool_available", return_value=True),
+            patch(
+                "pycmdcheck.checks.doctests.run_tool",
+                return_value=SubprocessResult(returncode=5, stdout=""),
+            ),
+        ):
+            result = check.run(temp_package, {})
+        assert result.status == CheckStatus.OK
+        assert "no doctests" in result.message.lower()
+
     def test_all_doctests_pass(self, temp_package: Path) -> None:
         """All doctests pass -> OK."""
         check = DoctestsCheck()

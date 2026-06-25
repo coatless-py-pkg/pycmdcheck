@@ -174,10 +174,12 @@ class DocsCheck(BaseCheck):
         details: list[str],
         issues: list[str],
     ) -> None:
-        """Check that the README contains common sections.
+        """Check that the README mentions common sections.
 
-        Looks for headings (Markdown ``#`` or ``##`` style) that contain
-        keywords for Installation and Usage/Quickstart sections.
+        Searches the whole README body (case-insensitive) for Installation
+        and Usage keywords rather than only Markdown ``#`` headings, so that
+        RST/Setext/plain-text READMEs and synonyms (Quick Start, Getting
+        Started, Example, Tutorial) are recognized and not falsely flagged.
         """
         readme_content = ""
         for filename in self.README_FILENAMES:
@@ -192,21 +194,18 @@ class DocsCheck(BaseCheck):
         if not readme_content:
             return
 
-        # Extract headings (lines starting with one or more '#')
-        headings = [
-            line.lstrip("#").strip().lower()
-            for line in readme_content.splitlines()
-            if re.match(r"^#{1,6}\s", line)
-        ]
+        text = readme_content.lower()
 
         expected_sections = {
-            "Installation": "install",
-            "Usage": "usage|quickstart|getting started",
+            "Installation": r"install",
+            "Usage": (
+                r"usage|quick[\s-]?start|getting[\s-]?started"
+                r"|example|tutorial|how to use"
+            ),
         }
 
         for section_name, pattern in expected_sections.items():
-            found = any(re.search(pattern, h) for h in headings)
-            if not found:
+            if not re.search(pattern, text):
                 issues.append(f"README missing section: {section_name}")
 
     def _check_docstrings(

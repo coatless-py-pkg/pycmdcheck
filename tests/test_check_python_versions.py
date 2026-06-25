@@ -54,3 +54,37 @@ class TestPythonVersionsCheck:
         assert check._specifier_allows(">=3.10", "3.10") is True
         assert check._specifier_allows(">=3.8", "3.8") is True
         assert check._specifier_allows(">=3.8", "3.9") is True
+
+    def test_poetry_python_constraint(self, tmp_path: Path) -> None:
+        """Legacy Poetry python constraint is recognized, not a false WARNING (#13)."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.poetry]\n"
+            'name = "mypkg"\nversion = "0.1.0"\n'
+            "[tool.poetry.dependencies]\n"
+            'python = "^3.10"\n'
+        )
+        check = PythonVersionsCheck()
+        result = check.run(tmp_path, {})
+        assert result.status != CheckStatus.WARNING
+        assert result.status == CheckStatus.OK
+
+    def test_setup_cfg_python_requires(self, tmp_path: Path) -> None:
+        """setup.cfg python_requires is honored when [project] is absent (#13)."""
+        (tmp_path / "setup.cfg").write_text(
+            "[metadata]\nname = mypkg\n\n[options]\npython_requires = >=3.10\n"
+        )
+        check = PythonVersionsCheck()
+        result = check.run(tmp_path, {})
+        assert result.status != CheckStatus.WARNING
+        assert result.status != CheckStatus.NOTE or "eol" in result.message.lower()
+
+    def test_fallback_parser_is_conservative(self) -> None:
+        """The packaging-free fallback never claims EOL is allowed when unsure (#21)."""
+        check = PythonVersionsCheck()
+        # Tilde and wildcard handled correctly.
+        assert check._fallback_allows("~=3.10", "3.8") is False
+        assert check._fallback_allows("~=3.8", "3.8") is True
+        assert check._fallback_allows("==3.*", "3.8") is True
+        assert check._fallback_allows(">=3.10", "3.8") is False
+        # Unparseable -> conservative False (not True).
+        assert check._fallback_allows("totally-bogus", "3.8") is False

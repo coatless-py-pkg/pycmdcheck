@@ -94,17 +94,18 @@ class DoctestsCheck(BaseCheck):
         stdout = result.stdout or ""
         lines = stdout.strip().splitlines()
 
-        if result.returncode == 0:
-            # Check if any doctests were actually found
-            if "no tests ran" in stdout.lower():
-                details.append("No doctests found in package modules")
-                return CheckResult(
-                    name=self.name,
-                    status=CheckStatus.OK,
-                    message="No doctests found",
-                    details=details,
-                )
+        # pytest exit code 5 means "no tests were collected" — for a package
+        # with no doctests this is success, not a failure.
+        if result.returncode == 5 or "no tests ran" in stdout.lower():
+            details.append("No doctests found in package modules")
+            return CheckResult(
+                name=self.name,
+                status=CheckStatus.OK,
+                message="No doctests found",
+                details=details,
+            )
 
+        if result.returncode == 0:
             details.append("All doctests passed")
             return CheckResult(
                 name=self.name,
