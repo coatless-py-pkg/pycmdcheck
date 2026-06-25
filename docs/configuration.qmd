@@ -12,7 +12,7 @@ pycmdcheck is configured via the `[tool.pycmdcheck]` section in your `pyproject.
 fail_on = ["error"]
 
 [tool.pycmdcheck.checks]
-# Enable/disable checks (all 20 checks are enabled by default; list only the
+# Enable/disable checks (every check is enabled by default; list only the
 # ones you want to turn off or configure).
 metadata = true
 structure = true

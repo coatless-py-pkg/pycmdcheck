@@ -70,7 +70,8 @@ class TestsCheck(BaseCheck):
 
             - OK status if all tests pass
             - WARNING status if no tests found
-            - ERROR status if tests fail or runner not installed
+            - ERROR status if tests fail, time out, fail to launch, or an
+              unknown runner is configured
             - SKIPPED status if the test runner is not installed
         """
         runner = config.get("runner", "pytest")

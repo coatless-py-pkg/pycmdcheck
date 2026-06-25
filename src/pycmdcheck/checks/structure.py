@@ -73,7 +73,10 @@ class StructureCheck(BaseCheck):
         Returns:
             A CheckResult with:
 
-            - OK status if valid src or flat layout found
+            - OK status if a valid src, flat, single-module, or PEP 420
+              namespace layout is found
+            - NOTE status if src/ has no Python package but a native-extension
+              build backend (maturin/scikit-build/setuptools-rust) is declared
             - WARNING status if packages missing ``__init__.py``
             - ERROR status if no package or module found
         """

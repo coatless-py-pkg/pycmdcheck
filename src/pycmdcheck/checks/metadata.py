@@ -65,8 +65,10 @@ class MetadataCheck(BaseCheck):
         Returns:
             A CheckResult with:
 
-            - OK status if all required and recommended fields present
-            - NOTE status if required fields present but some recommended missing
+            - OK status if all required, recommended, and extended (authors,
+              urls, classifiers) fields are present
+            - NOTE status if required fields are present but some recommended
+              or extended fields are missing
             - WARNING status if using legacy setup.py/setup.cfg
             - ERROR status if pyproject.toml is invalid or missing required fields
         """

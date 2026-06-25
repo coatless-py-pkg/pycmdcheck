@@ -1,13 +1,42 @@
 """Tests for the profile system."""
 
+from pathlib import Path
+
 from click.testing import CliRunner
 
 from pycmdcheck.cli import main
-from pycmdcheck.profiles import DYNAMIC_CHECKS, get_profile, list_profiles
+from pycmdcheck.profiles import (
+    ALL_CHECKS,
+    DYNAMIC_CHECKS,
+    ORIGINAL_CHECKS,
+    STATIC_CHECKS,
+    get_profile,
+    list_profiles,
+)
+from pycmdcheck.pyproject_reader import read_pyproject
 
 
 class TestProfileModule:
     """Tests for profiles.py module."""
+
+    def test_all_checks_matches_registered_built_in_checks(self) -> None:
+        """ALL_CHECKS must equal the built-in checks registered in pyproject.toml.
+
+        This guards against silent drift: adding or removing a check entry point
+        without updating ALL_CHECKS (and thus the pyopensci/strict/triage
+        profiles) fails here instead of quietly shipping an incomplete profile.
+        """
+        repo_root = Path(__file__).resolve().parent.parent
+        data = read_pyproject(repo_root)
+        assert data is not None
+        registered = set(data["project"]["entry-points"]["pycmdcheck.checks"])
+        assert ALL_CHECKS == registered
+
+    def test_curated_subsets_reference_real_checks(self) -> None:
+        """The curated/derived profile sets only reference real built-in checks."""
+        assert ORIGINAL_CHECKS <= ALL_CHECKS
+        assert DYNAMIC_CHECKS <= ALL_CHECKS
+        assert STATIC_CHECKS <= ALL_CHECKS
 
     def test_get_profile_valid(self) -> None:
         """Known profile names return a Profile."""

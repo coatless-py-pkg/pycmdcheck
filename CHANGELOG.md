@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pycmdcheck/pycmdcheck` URLs referenced a repository that does not exist (404).
 - Installation instructions use `pip install pycmdcheck` now that the package is
   published on PyPI.
+- Corrected inaccurate docstrings (the `metadata`/`tests`/`structure`/`typing`
+  Returns sections, the `check`/`run_checks` built-in-check lists, `get_profile`,
+  and `discover_checks`) and the illustrative API doctests that crashed under
+  `pytest --doctest-modules`.
 
 ### Changed
 
@@ -28,7 +32,7 @@ First release of pycmdcheck on PyPI.
 
 - Core `check()` function and `pycmdcheck` CLI, with Rich terminal output and
   JSON output for CI integration.
-- 20 built-in checks: `metadata`, `structure`, `tests`, `linting`, `typing`,
+- Built-in checks: `metadata`, `structure`, `tests`, `linting`, `typing`,
   `imports`, `license`, `docs`, `dependencies`, `build`, `formatting`,
   `version`, `py_typed`, `community`, `ci`, `changelog`, `citation`,
   `python_versions`, `urls`, `doctests`.
