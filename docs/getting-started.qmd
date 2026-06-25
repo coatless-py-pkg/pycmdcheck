@@ -4,34 +4,44 @@ title: Getting Started
 
 ## Installation
 
+::: {.callout-note}
+pycmdcheck is not yet published to PyPI. Install it directly from GitHub for
+now. Once it is released, `pip install pycmdcheck` will work too.
+:::
+
 ### Using pip
 
 ```bash
-pip install pycmdcheck
+pip install git+https://github.com/coatless-py-pkg/pycmdcheck
 ```
 
 ### Using uv
 
 ```bash
-uv add pycmdcheck
+uv pip install git+https://github.com/coatless-py-pkg/pycmdcheck
 ```
+
+To pin a specific branch, tag, or commit, append `@<ref>` to the URL — for
+example `git+https://github.com/coatless-py-pkg/pycmdcheck@main`.
 
 ### Optional Dependencies
 
-pycmdcheck can use external tools for linting and type checking. Install the optional dependencies based on your needs:
+pycmdcheck can use external tools for linting and type checking. Request the
+matching extra when installing. For a GitHub install, the extra goes in the
+PEP 508 `pycmdcheck[extra] @ <url>` form:
 
 ```bash
 # For mypy type checking
-pip install pycmdcheck[typing-mypy]
+pip install "pycmdcheck[typing-mypy] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 
 # For pyright type checking
-pip install pycmdcheck[typing-pyright]
+pip install "pycmdcheck[typing-pyright] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 
 # For ruff linting
-pip install pycmdcheck[linting]
+pip install "pycmdcheck[linting] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 
 # All optional dependencies
-pip install pycmdcheck[all]
+pip install "pycmdcheck[all] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 ```
 
 ## Your First Check
@@ -44,25 +54,28 @@ Navigate to your Python package directory and run:
 pycmdcheck
 ```
 
-You'll see output like:
+You'll see output like (abbreviated — a default run executes all 20 checks):
 
 ```
 Checking package: /path/to/your/package
 
-┏━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ St… ┃ Check     ┃ Message                    ┃
-┡━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│  ✓  │ docs      │ Documentation present      │
-│  ✓  │ imports   │ All imports are valid      │
-│  ✓  │ license   │ License file present       │
-│  ✓  │ linting   │ No linting issues found    │
-│  ✓  │ metadata  │ Package metadata is valid  │
-│  ✓  │ structure │ Valid src layout structure │
-│  ✓  │ tests     │ All tests passed           │
-│  ✓  │ typing    │ No type errors found       │
-└─────┴───────────┴────────────────────────────┘
+┏━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ St… ┃ Check           ┃ Message                     ┃
+┡━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│  ✓  │ metadata        │ Package metadata is valid   │
+│  ✓  │ structure       │ Valid src layout structure  │
+│  ✓  │ license         │ License file present        │
+│  ✓  │ docs            │ Documentation present       │
+│  ✓  │ imports         │ All imports are valid       │
+│  ✓  │ tests           │ All tests passed            │
+│  ✓  │ linting         │ No linting issues found     │
+│  ✓  │ typing          │ No type errors found        │
+│  ✓  │ version         │ Version 0.1.0 is consistent │
+│  ℹ  │ ci              │ No CI configuration found   │
+│  …  │ …               │ … (all 20 checks run)       │
+└─────┴─────────────────┴─────────────────────────────┘
 
-8 ok
+18 ok | 2 note
 
 All checks passed!
 ```
@@ -98,18 +111,33 @@ Each check returns one of five statuses:
 
 ## Built-in Checks
 
-pycmdcheck includes 8 built-in checks:
+pycmdcheck includes 20 built-in checks:
 
 | Check | Description |
 |-------|-------------|
-| `metadata` | Validates pyproject.toml has required fields |
-| `structure` | Checks package directory structure |
-| `tests` | Runs pytest or unittest |
-| `linting` | Runs ruff, flake8, or pylint |
-| `typing` | Runs mypy or pyright |
-| `imports` | Validates all imports resolve |
-| `license` | Checks for LICENSE file |
-| `docs` | Checks for README file |
+| `metadata` | Validate package metadata (pyproject.toml) |
+| `structure` | Validate package directory structure |
+| `tests` | Run package tests (pytest/unittest) |
+| `linting` | Run code linting (ruff/flake8/pylint) |
+| `typing` | Run type checking (mypy/pyright) |
+| `imports` | Validate package imports |
+| `license` | Check for license file |
+| `docs` | Check documentation (README, docstrings) |
+| `dependencies` | Audit declared vs. actual dependencies |
+| `build` | Verify package builds successfully |
+| `formatting` | Check code formatting (ruff format/black) |
+| `version` | Verify version consistency |
+| `py_typed` | Check for PEP 561 py.typed marker |
+| `community` | Check for community health files |
+| `ci` | Check for CI configuration |
+| `changelog` | Check for changelog or news file |
+| `citation` | Check for citation file |
+| `python_versions` | Check Python version support (EOL versions) |
+| `urls` | Validate project URLs are reachable |
+| `doctests` | Run doctests in package modules |
+
+See [Configuration](configuration.qmd) for per-check options and
+[CLI Reference](cli.qmd) for profiles that select subsets of these.
 
 ## Next Steps
 

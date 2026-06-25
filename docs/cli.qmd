@@ -51,6 +51,36 @@ pycmdcheck --fail-on error --fail-on warning
 pycmdcheck --fail-on error --fail-on warning --fail-on note
 ```
 
+### `--profile`
+
+Run a predefined set of checks. Available profiles:
+
+| Profile | Checks |
+|---------|--------|
+| `minimal` | metadata, structure, license |
+| `triage` | static checks only — no install, external tools, or network (for CI triage of arbitrary repos) |
+| `default` | the 13 core checks |
+| `pyopensci` | all 20 checks, with stricter docs settings |
+| `strict` | all 20 checks at maximum strictness |
+
+```bash
+# pyOpenSci onboarding checks
+pycmdcheck --profile pyopensci
+
+# Static-only triage (safe on an un-installed repo)
+pycmdcheck --profile triage
+```
+
+A profile can be combined with `--skip` to exclude specific checks.
+
+### `--list-profiles`
+
+List the available profiles and exit.
+
+```bash
+pycmdcheck --list-profiles
+```
+
 ### `--list`
 
 List all available checks and exit.
@@ -59,21 +89,33 @@ List all available checks and exit.
 pycmdcheck --list
 ```
 
-Output:
+Output (20 checks):
 ```
-                     Available Checks
-┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Name      ┃ Description                                ┃
-┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ docs      │ Check documentation (README, docstrings)   │
-│ imports   │ Validate package imports                   │
-│ license   │ Check for license file                     │
-│ linting   │ Run code linting (ruff/flake8/pylint)      │
-│ metadata  │ Validate package metadata (pyproject.toml) │
-│ structure │ Validate package directory structure       │
-│ tests     │ Run package tests (pytest/unittest)        │
-│ typing    │ Run type checking (mypy/pyright)           │
-└───────────┴────────────────────────────────────────────┘
+                           Available Checks
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Name            ┃ Description                                 ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ build           │ Verify package builds successfully          │
+│ changelog       │ Check for changelog or news file            │
+│ ci              │ Check for CI configuration                  │
+│ citation        │ Check for citation file                     │
+│ community       │ Check for community health files            │
+│ dependencies    │ Audit declared vs. actual dependencies      │
+│ docs            │ Check documentation (README, docstrings)    │
+│ doctests        │ Run doctests in package modules             │
+│ formatting      │ Check code formatting (ruff format/black)   │
+│ imports         │ Validate package imports                    │
+│ license         │ Check for license file                      │
+│ linting         │ Run code linting (ruff/flake8/pylint)       │
+│ metadata        │ Validate package metadata (pyproject.toml)  │
+│ py_typed        │ Check for PEP 561 py.typed marker           │
+│ python_versions │ Check Python version support (EOL versions) │
+│ structure       │ Validate package directory structure        │
+│ tests           │ Run package tests (pytest/unittest)         │
+│ typing          │ Run type checking (mypy/pyright)            │
+│ urls            │ Validate project URLs are reachable         │
+│ version         │ Verify version consistency                  │
+└─────────────────┴─────────────────────────────────────────────┘
 ```
 
 ### `-v, --verbose`
@@ -98,8 +140,8 @@ Example output:
   "package_path": "/path/to/package",
   "passed": true,
   "summary": {
-    "ok": 8,
-    "note": 0,
+    "ok": 18,
+    "note": 2,
     "warning": 0,
     "error": 0,
     "skipped": 0
@@ -124,6 +166,23 @@ Run checks sequentially instead of in parallel.
 pycmdcheck --no-parallel
 ```
 
+### `-x, --fail-fast`
+
+Stop after the first check whose status matches `--fail-on`.
+
+```bash
+pycmdcheck -x
+pycmdcheck --fail-fast
+```
+
+### `--debug`
+
+Enable debug logging output (useful when diagnosing check behavior).
+
+```bash
+pycmdcheck --debug
+```
+
 ### `--version`
 
 Show version and exit.
@@ -146,6 +205,7 @@ pycmdcheck --help
 |------|---------|
 | 0 | All checks passed (no status matching `--fail-on`) |
 | 1 | One or more checks failed (status matched `--fail-on`) |
+| 2 | Invalid usage (e.g., an unknown check name passed to `-c`/`--check`) |
 
 ## Examples
 

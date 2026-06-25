@@ -4,30 +4,40 @@ A Python package quality checker inspired by R's `R CMD check`.
 
 ## Installation
 
+> **Note:** pycmdcheck is not yet published to PyPI. Install it directly from
+> GitHub for now. Once it is released, `pip install pycmdcheck` will work too.
+
 ```bash
-pip install pycmdcheck
+pip install git+https://github.com/coatless-py-pkg/pycmdcheck
 ```
 
 Or with uv:
 
 ```bash
-uv add pycmdcheck
+uv pip install git+https://github.com/coatless-py-pkg/pycmdcheck
 ```
+
+To pin a specific branch, tag, or commit, append `@<ref>` to the URL — for
+example `git+https://github.com/coatless-py-pkg/pycmdcheck@main`.
 
 ### Optional dependencies
 
+pycmdcheck can use external tools for linting and type checking. Request the
+matching extra in the install command. For a GitHub install, the extra goes in
+the PEP 508 `pycmdcheck[extra] @ <url>` form:
+
 ```bash
 # For mypy type checking
-pip install pycmdcheck[typing-mypy]
+pip install "pycmdcheck[typing-mypy] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 
 # For pyright type checking
-pip install pycmdcheck[typing-pyright]
+pip install "pycmdcheck[typing-pyright] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 
 # For ruff linting
-pip install pycmdcheck[linting]
+pip install "pycmdcheck[linting] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 
 # All optional dependencies
-pip install pycmdcheck[all]
+pip install "pycmdcheck[all] @ git+https://github.com/coatless-py-pkg/pycmdcheck"
 ```
 
 ## Usage
@@ -151,6 +161,7 @@ Profiles bundle checks for common use cases:
 | Profile | Description | Checks |
 |---------|-------------|--------|
 | `minimal` | Quick sanity checks | metadata, structure, license |
+| `triage` | Static checks only — no install, external tools, or network (for CI triage of arbitrary repos) | All static checks (excludes tests, imports, dependencies, build, linting, typing, formatting, doctests, urls) |
 | `default` | Standard quality checks | All 13 core checks |
 | `pyopensci` | pyOpenSci onboarding | All 20 checks with stricter docs settings |
 | `strict` | Maximum strictness | All 20 checks with strict typing |
@@ -158,6 +169,9 @@ Profiles bundle checks for common use cases:
 ```bash
 # Run pyOpenSci onboarding checks
 pycmdcheck --profile pyopensci
+
+# Static-only triage (safe to run on an un-installed repo in CI)
+pycmdcheck --profile triage
 
 # Quick check before committing
 pycmdcheck --profile minimal
@@ -189,6 +203,9 @@ license = true
 tests = { enabled = true, runner = "pytest" }
 linting = { enabled = true, tool = "ruff" }
 typing = { enabled = true, tool = "mypy", strict = false }
+# formatting "tool" defaults to "auto": detects ruff vs black from
+# [tool.ruff]/ruff.toml or [tool.black]; skips if neither is configured.
+formatting = { enabled = true, tool = "auto" }
 docs = { enabled = true, require_readme = true, check_docstrings = false, check_readme_sections = false }
 
 # New checks (disabled by default in "default" profile)

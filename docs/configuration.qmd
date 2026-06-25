@@ -12,7 +12,8 @@ pycmdcheck is configured via the `[tool.pycmdcheck]` section in your `pyproject.
 fail_on = ["error"]
 
 [tool.pycmdcheck.checks]
-# Enable/disable checks
+# Enable/disable checks (all 20 checks are enabled by default; list only the
+# ones you want to turn off or configure).
 metadata = true
 structure = true
 tests = true
@@ -21,7 +22,15 @@ typing = true
 imports = true
 license = true
 docs = true
+# ...plus dependencies, build, formatting, version, py_typed, community, ci,
+# changelog, citation, python_versions, urls, doctests. See `pycmdcheck --list`.
 ```
+
+::: {.callout-tip}
+Prefer a [profile](cli.qmd) (`--profile minimal|triage|default|pyopensci|strict`)
+to select a curated check set without editing `pyproject.toml`. A profile's
+check set overrides the per-check enable flags here.
+:::
 
 ## Global Options
 
@@ -74,6 +83,11 @@ metadata = true  # No additional options
 
 **Required fields**: `name`, `version`
 **Recommended fields**: `description`, `readme`, `license`, `requires-python`
+**Extended fields** (reported as a NOTE if missing): `authors`, `urls`, `classifiers`
+
+A field declared in PEP 621 `dynamic` (e.g. `dynamic = ["version"]`) counts as
+present. Legacy Poetry projects (`[tool.poetry]` with no `[project]` table) are
+also recognized.
 
 ### structure
 
@@ -84,7 +98,9 @@ Validates package directory structure.
 structure = true  # No additional options
 ```
 
-Supports both src layout (`src/package/`) and flat layout (`package/`).
+Accepts src layout (`src/package/`), flat layout (`package/`), single-file
+modules (`package.py`), PEP 420 implicit namespace packages, and
+native-extension build backends (maturin/scikit-build/setuptools-rust).
 
 ### tests
 
@@ -180,6 +196,26 @@ typing = { enabled = true, tool = "mypy", strict = true }
 typing = { enabled = true, tool = "mypy", args = ["--ignore-missing-imports"] }
 ```
 
+### formatting
+
+Checks code formatting without modifying files.
+
+```toml
+[tool.pycmdcheck.checks]
+formatting = { enabled = true, tool = "auto" }
+```
+
+**Options:**
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `tool` | `"auto"`, `"ruff"`, `"black"` | `"auto"` | Formatter to check against |
+| `args` | list of strings | `[]` | Additional arguments |
+
+With `tool = "auto"` (the default), the formatter is detected from the package:
+`[tool.ruff]`/`ruff.toml` → ruff, `[tool.black]` → black. If neither is
+configured the check is **skipped** (pyOpenSci does not mandate a formatter).
+
 ### imports
 
 Validates all imports can be resolved.
@@ -198,7 +234,11 @@ Checks for license file.
 license = true  # No additional options
 ```
 
-Recognizes: `LICENSE`, `LICENSE.txt`, `LICENSE.md`, `LICENCE`, `COPYING`
+Recognizes `LICENSE`, `LICENSE.txt`, `LICENSE.md`, `LICENSE.rst`, `LICENCE`
+(and `.txt`/`.md` variants), `COPYING`, `COPYING.txt`, plus suffixed/dual-license
+filenames such as `LICENSE-MIT`, `LICENSE-APACHE`, and `COPYING.LESSER`. A file
+referenced via `license = {file = "..."}` / `license-files` in `pyproject.toml`
+also counts.
 
 ### docs
 
@@ -214,7 +254,9 @@ docs = { enabled = true, require_readme = true }
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `require_readme` | boolean | `true` | Require README file |
-| `check_docstrings` | boolean | `false` | Check for docstrings |
+| `check_docstrings` | boolean | `false` | Check public items for docstrings |
+| `check_readme_sections` | boolean | `false` | Check README mentions Installation/Usage |
+| `min_docstring_coverage` | float | `0.0` | Minimum docstring coverage % (0 = disabled) |
 
 **Examples:**
 
@@ -222,8 +264,8 @@ docs = { enabled = true, require_readme = true }
 # Basic (require README)
 docs = true
 
-# With docstring checking
-docs = { enabled = true, require_readme = true, check_docstrings = true }
+# With docstring + section checking
+docs = { enabled = true, require_readme = true, check_docstrings = true, check_readme_sections = true }
 ```
 
 ## Complete Example
@@ -238,7 +280,20 @@ structure = true
 tests = { enabled = true, runner = "pytest" }
 linting = { enabled = true, tool = "ruff", args = ["--select", "E,F,W,I"] }
 typing = { enabled = true, tool = "mypy", strict = true }
+formatting = { enabled = true, tool = "auto" }
 imports = true
 license = true
+dependencies = true
+build = true
+version = true
+py_typed = true
 docs = { enabled = true, require_readme = true, check_docstrings = false }
+# pyOpenSci / community checks
+community = true
+ci = true
+changelog = true
+citation = true
+python_versions = true
+urls = true
+doctests = true
 ```
