@@ -157,6 +157,62 @@ class TestStructureCheck:
         assert result.status == CheckStatus.WARNING
         assert "missing __init__.py" in result.message.lower()
 
+    def test_src_layout_namespace_package(self, tmp_path: Path) -> None:
+        """A PEP 420 namespace package in src/ is OK, not a missing-init WARNING."""
+        from pycmdcheck.checks.structure import StructureCheck
+
+        nested = tmp_path / "src" / "acme" / "widgets"
+        nested.mkdir(parents=True)
+        # acme/ has NO __init__.py (namespace), widgets/ is a real subpackage.
+        (nested / "__init__.py").write_text("")
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "acme-widgets"\nversion = "0.1.0"\n'
+        )
+
+        check = StructureCheck()
+        result = check.run(tmp_path, {})
+
+        assert result.status == CheckStatus.OK
+        assert any("namespace" in d.lower() for d in result.details)
+
+    def test_flat_layout_namespace_package(self, tmp_path: Path) -> None:
+        """A flat-layout PEP 420 namespace package is OK, not ERROR."""
+        from pycmdcheck.checks.structure import StructureCheck
+
+        nested = tmp_path / "acme" / "widgets"
+        nested.mkdir(parents=True)
+        (nested / "__init__.py").write_text("")
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "acme-widgets"\nversion = "0.1.0"\n'
+        )
+
+        check = StructureCheck()
+        result = check.run(tmp_path, {})
+
+        assert result.status == CheckStatus.OK
+        assert any("namespace" in d.lower() for d in result.details)
+
+    def test_native_extension_src_no_python(self, tmp_path: Path) -> None:
+        """maturin/native package with no Python in src/ -> NOTE, not ERROR."""
+        from pycmdcheck.checks.structure import StructureCheck
+
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        (src_dir / "lib.rs").write_text("// rust source\n")
+        (tmp_path / "pyproject.toml").write_text(
+            "[build-system]\n"
+            'requires = ["maturin>=1.0"]\n'
+            'build-backend = "maturin"\n'
+            "\n[project]\n"
+            'name = "rustpkg"\nversion = "0.1.0"\n'
+        )
+
+        check = StructureCheck()
+        result = check.run(tmp_path, {})
+
+        assert result.status == CheckStatus.NOTE
+        assert "native" in result.message.lower()
+
 
 # ---------------------------------------------------------------------------
 # License check
@@ -478,6 +534,25 @@ class TestImportsCheck:
         result = check.run(tmp_path, {})
 
         assert result.status == CheckStatus.OK
+
+    def test_declared_but_uninstalled_dep_not_flagged(self, tmp_path: Path) -> None:
+        """A declared dependency that isn't installed must not be flagged (#2)."""
+        from pycmdcheck.checks.imports import ImportsCheck
+
+        pkg = tmp_path / "src" / "mypkg"
+        pkg.mkdir(parents=True)
+        # Import a package that is declared but (almost certainly) not installed.
+        (pkg / "__init__.py").write_text("import nonexistent_declared_dep_xyz\n")
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "mypkg"\nversion = "0.1.0"\n'
+            'dependencies = ["nonexistent-declared-dep-xyz>=1.0"]\n'
+        )
+
+        check = ImportsCheck()
+        result = check.run(tmp_path, {})
+
+        assert result.status == CheckStatus.OK
+        assert not any("nonexistent_declared_dep_xyz" in d for d in result.details)
 
 
 # ---------------------------------------------------------------------------

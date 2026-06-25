@@ -11,7 +11,7 @@ subtitle: Python package quality checker inspired by R CMD check
 
 - **Comprehensive Checks**: Validates metadata, structure, tests, linting, typing, imports, license, and documentation
 - **Configurable**: Enable/disable checks and configure tools via `pyproject.toml`
-- **Multiple Backends**: Supports ruff/flake8/pylint for linting, mypy/pyright for type checking
+- **Multiple Backends**: Supports ruff/flake8/pylint for linting, mypy/pyright for type checking, and ruff/black (auto-detected) for formatting
 - **Extensible**: Create custom checks via entry points
 - **Beautiful Output**: Rich terminal output with status indicators and details
 - **Parallel Execution**: Runs checks in parallel for speed
@@ -52,14 +52,19 @@ else:
 
 ## Installation
 
+::: {.callout-note}
+pycmdcheck is not yet published to PyPI. Install it directly from GitHub for
+now. Once it is released, `pip install pycmdcheck` will work too.
+:::
+
 ```bash
-pip install pycmdcheck
+pip install git+https://github.com/coatless-py-pkg/pycmdcheck
 ```
 
 Or with uv:
 
 ```bash
-uv add pycmdcheck
+uv pip install git+https://github.com/coatless-py-pkg/pycmdcheck
 ```
 
 ## Next Steps

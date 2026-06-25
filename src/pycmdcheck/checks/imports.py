@@ -12,7 +12,12 @@ from typing import Any
 
 from pycmdcheck.ast_cache import parse_file
 from pycmdcheck.checks.base import BaseCheck
+from pycmdcheck.checks.dependencies import (
+    _resolve_import_name,
+    _strip_version_specifier,
+)
 from pycmdcheck.package_layout import PackageLayout
+from pycmdcheck.pyproject_reader import get_effective_project_table, read_pyproject
 from pycmdcheck.results import CheckResult, CheckStatus
 
 
@@ -153,6 +158,12 @@ class ImportsCheck(BaseCheck):
         # Get package name(s) from src/ or root
         local_packages = layout.local_package_names()
 
+        # Import names that map to a declared dependency. These must not be
+        # flagged just because the dependency is not installed in the current
+        # environment (e.g. a no-install CI run) — that is an environment
+        # condition, not a missing import.
+        declared_imports = self._declared_import_names(package_path)
+
         # Track which modules we've already checked
         checked: set[str] = set()
         unresolvable: set[str] = set()
@@ -170,6 +181,10 @@ class ImportsCheck(BaseCheck):
             if module_name in local_packages:
                 continue
 
+            # Skip declared dependencies (may simply not be installed here)
+            if module_name in declared_imports:
+                continue
+
             # Probe without executing the module
             try:
                 spec = importlib.util.find_spec(module_name)
@@ -184,6 +199,40 @@ class ImportsCheck(BaseCheck):
                     )
 
         return issues
+
+    def _declared_import_names(self, package_path: Path) -> set[str]:
+        """Return import names for all declared dependencies.
+
+        Includes ``[project].dependencies``, every extra in
+        ``optional-dependencies``, PEP 735 ``[dependency-groups]``, and legacy
+        Poetry dependencies (via the effective project table). Each PyPI name
+        is mapped to its import name (e.g. ``PyYAML`` -> ``yaml``).
+        """
+        project = get_effective_project_table(package_path)
+        raw: list[str] = []
+        if project:
+            deps = project.get("dependencies", [])
+            if isinstance(deps, list):
+                raw.extend(d for d in deps if isinstance(d, str))
+            optional = project.get("optional-dependencies", {})
+            if isinstance(optional, dict):
+                for group in optional.values():
+                    if isinstance(group, list):
+                        raw.extend(d for d in group if isinstance(d, str))
+
+        data = read_pyproject(package_path) or {}
+        groups = data.get("dependency-groups", {})
+        if isinstance(groups, dict):
+            for group in groups.values():
+                if isinstance(group, list):
+                    raw.extend(d for d in group if isinstance(d, str))
+
+        names: set[str] = set()
+        for dep in raw:
+            pypi_name = _strip_version_specifier(dep)
+            if pypi_name:
+                names.add(_resolve_import_name(pypi_name))
+        return names
 
     def _get_stdlib_modules(self) -> frozenset[str]:
         """Get set of standard library module names."""

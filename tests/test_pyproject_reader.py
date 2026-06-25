@@ -6,8 +6,10 @@ import pytest
 
 from pycmdcheck.pyproject_reader import (
     clear_cache,
+    get_effective_project_table,
     get_project_table,
     get_tool_table,
+    poetry_python_to_pep440,
     read_pyproject,
 )
 
@@ -99,3 +101,54 @@ class TestGetToolTable:
         """get_tool_table returns {} when pyproject.toml is absent."""
         result = get_tool_table(empty_dir, "sometool")
         assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# TestEffectiveProjectTable (legacy Poetry normalization)
+# ---------------------------------------------------------------------------
+
+
+class TestEffectiveProjectTable:
+    """Tests for get_effective_project_table() and Poetry normalization."""
+
+    def test_pep621_passthrough(self, temp_package: Path) -> None:
+        """A PEP 621 [project] table is returned unchanged."""
+        project = get_effective_project_table(temp_package)
+        assert project["name"] == "mypackage"
+        assert project["version"] == "0.1.0"
+
+    def test_synthesizes_from_poetry(self, tmp_path: Path) -> None:
+        """Legacy [tool.poetry] is normalized into a PEP 621-shaped dict."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.poetry]\n"
+            'name = "mypkg"\nversion = "1.2.3"\n'
+            'description = "desc"\nreadme = "README.md"\nlicense = "MIT"\n'
+            'authors = ["Jane Doe <jane@example.com>"]\n'
+            'classifiers = ["Programming Language :: Python :: 3"]\n'
+            'homepage = "https://example.com"\n'
+            "[tool.poetry.dependencies]\n"
+            'python = "^3.10"\nrequests = "^2.0"\n'
+        )
+        project = get_effective_project_table(tmp_path)
+        assert project["name"] == "mypkg"
+        assert project["version"] == "1.2.3"
+        assert project["requires-python"] == ">=3.10"
+        assert project["authors"] == [{"name": "Jane Doe", "email": "jane@example.com"}]
+        assert project["urls"]["Homepage"] == "https://example.com"
+        assert "requests" in project["dependencies"]
+        assert "python" not in project["dependencies"]
+
+    def test_empty_when_no_metadata(self, tmp_path: Path) -> None:
+        """pyproject.toml with neither [project] nor [tool.poetry] -> {}."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[build-system]\nrequires = ["setuptools"]\n'
+        )
+        assert get_effective_project_table(tmp_path) == {}
+
+    def test_poetry_python_translation(self) -> None:
+        """poetry_python_to_pep440 maps caret/tilde to a PEP 440 lower bound."""
+        assert poetry_python_to_pep440("^3.9") == ">=3.9"
+        assert poetry_python_to_pep440("~3.8") == ">=3.8"
+        assert poetry_python_to_pep440(">=3.10,<4") == ">=3.10,<4"
+        assert poetry_python_to_pep440("3.11") == ">=3.11"
+        assert poetry_python_to_pep440("") is None

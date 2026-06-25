@@ -9,6 +9,7 @@ from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
 from pycmdcheck.constants import LONG_TIMEOUT, MAX_DETAIL_LINES
+from pycmdcheck.package_layout import PackageLayout
 from pycmdcheck.results import CheckResult, CheckStatus
 from pycmdcheck.subprocess_runner import run_tool, sanitize_args, tool_available
 
@@ -105,17 +106,23 @@ class TypingCheck(BaseCheck):
                 details=["Install mypy: pip install mypy"],
             )
 
-        # Determine target directory
-        src_dir = package_path / "src"
-        if src_dir.is_dir():
-            target = str(src_dir)
-        else:
-            target = "."
+        # Target the discovered package(s)/module(s) rather than ".", which on
+        # flat/single-module layouts makes mypy scan tests/build/etc. and emit
+        # spurious "Duplicate module" discovery failures. mypy auto-detects the
+        # base directory by walking up past __init__.py, so module names stay
+        # correct (we deliberately do NOT pass --explicit-package-bases, which
+        # would mis-root packages relative to the cwd).
+        layout = PackageLayout(package_path)
+        targets = [str(p) for p in layout.package_dirs]
+        targets += [str(m) for m in layout.top_level_modules()]
+        if not targets:
+            src_dir = package_path / "src"
+            targets = [str(src_dir) if src_dir.is_dir() else "."]
 
         args = sanitize_args(config.get("args", []))
         strict = config.get("strict", False)
 
-        cmd = ["mypy", target]
+        cmd = ["mypy", "--namespace-packages", *targets]
         if strict:
             cmd.append("--strict")
         cmd.extend(args)
@@ -149,6 +156,17 @@ class TypingCheck(BaseCheck):
                     message="No type errors found",
                     details=list(preamble),
                 )
+
+        # mypy exit code 2 is a fatal/discovery/config error (e.g. duplicate
+        # modules, missing config) — not a type-error finding.
+        if result.returncode == 2:
+            detail_lines = (result.output or "").strip().splitlines()
+            return CheckResult(
+                name=self.name,
+                status=CheckStatus.WARNING,
+                message="mypy could not analyze the package (configuration/layout)",
+                details=[*preamble, *detail_lines[:MAX_DETAIL_LINES]],
+            )
 
         # Parse mypy output for errors
         errors = []

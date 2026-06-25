@@ -50,6 +50,20 @@ NON_PACKAGE_DIRS: frozenset[str] = frozenset(
 )
 """Top-level directories that are never real packages in a flat layout."""
 
+NON_MODULE_FILES: frozenset[str] = frozenset(
+    {
+        "setup.py",
+        "conftest.py",
+        "noxfile.py",
+        "tasks.py",
+        "manage.py",
+        "versioneer.py",
+        "__init__.py",
+        "__main__.py",
+    }
+)
+"""Top-level ``.py`` files that are tooling/scripts, not the package module."""
+
 
 class PackageLayout:
     """Discover and expose the layout of a Python project.
@@ -148,6 +162,37 @@ class PackageLayout:
     def local_package_names(self) -> set[str]:
         """Return the names of all discovered local packages."""
         return {d.name for d in self.package_dirs}
+
+    @property
+    def import_root(self) -> Path:
+        """Return the directory imports resolve from (``src/`` or the root)."""
+        if self._is_src_layout is None:
+            self._discover()
+        src_dir = self._root / "src"
+        return src_dir if (self._is_src_layout and src_dir.is_dir()) else self._root
+
+    def top_level_modules(self) -> list[Path]:
+        """Return single-file top-level modules at the import root.
+
+        Finds ``.py`` files directly under the import root (``src/`` for a
+        src-layout, otherwise the project root) that represent the package
+        itself — e.g. a single-module package ``foo.py`` — excluding common
+        tooling scripts (``setup.py``, ``conftest.py``, …). Used to support
+        single-module packages that have no package directory / ``__init__.py``.
+        """
+        base = self.import_root
+        if not base.is_dir():
+            return []
+        modules: list[Path] = []
+        for item in sorted(base.iterdir()):
+            if (
+                item.is_file()
+                and item.suffix == ".py"
+                and item.name not in NON_MODULE_FILES
+                and not item.name.startswith(".")
+            ):
+                modules.append(item)
+        return modules
 
     # ── Internal discovery ────────────────────────────────────────────
 

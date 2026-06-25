@@ -73,6 +73,59 @@ class TestVersionCheck:
         assert result.status == CheckStatus.OK
         assert "dynamic" in result.message.lower()
 
+    def test_single_module_version(self, tmp_path: Path) -> None:
+        """Single-module package (src/foo.py, no package dir) is checked (#17)."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "mypkg"\nversion = "1.0.0"\n'
+        )
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "mypkg.py").write_text('__version__ = "1.0.0"\n')
+        check = VersionCheck()
+        result = check.run(tmp_path, {})
+        assert result.status == CheckStatus.OK
+
+    def test_reexported_version_is_dynamic(self, tmp_path: Path) -> None:
+        """`from ._version import __version__` is treated as dynamic, not missing."""
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "mypkg"\nversion = "1.0.0"\n'
+        )
+        pkg = tmp_path / "src" / "mypkg"
+        pkg.mkdir(parents=True)
+        (pkg / "__init__.py").write_text("from ._version import __version__\n")
+        (pkg / "_version.py").write_text('__version__ = "1.0.0"\n')
+        check = VersionCheck()
+        result = check.run(tmp_path, {})
+        assert result.status == CheckStatus.OK
+        assert "dynamic" in result.message.lower()
+
+    def test_legacy_poetry_version_checked(self, tmp_path: Path) -> None:
+        """Legacy Poetry version (under [tool.poetry]) is compared (#19)."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.poetry]\n"
+            'name = "mypkg"\nversion = "1.0.0"\n'
+            "[tool.poetry.dependencies]\n"
+            'python = "^3.10"\n'
+        )
+        pkg = tmp_path / "mypkg"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text('__version__ = "1.0.0"\n')
+        check = VersionCheck()
+        result = check.run(tmp_path, {})
+        assert result.status == CheckStatus.OK
+
+    def test_pyproject_without_project_table(self, tmp_path: Path) -> None:
+        """pyproject present but no [project]/[tool.poetry] -> NOTE (#19)."""
+        (tmp_path / "pyproject.toml").write_text(
+            "[build-system]\n"
+            'requires = ["setuptools"]\n'
+            'build-backend = "setuptools.build_meta"\n'
+        )
+        check = VersionCheck()
+        result = check.run(tmp_path, {})
+        assert result.status == CheckStatus.NOTE
+        assert "project" in result.message.lower()
+
     def test_unparseable_init(self, tmp_path: Path) -> None:
         """Unparseable __init__.py returns WARNING (no __version__ found)."""
         (tmp_path / "pyproject.toml").write_text(

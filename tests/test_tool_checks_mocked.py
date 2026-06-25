@@ -110,6 +110,28 @@ class TestLintingCheckMocked:
         assert result.status == CheckStatus.WARNING
         assert "2" in result.message
 
+    def test_ruff_config_error_is_not_a_lint_finding(self, temp_package: Path) -> None:
+        """ruff exit code 2 (config/usage error) -> ERROR, not 'Found 0 issues' (#8)."""
+        from pycmdcheck.checks.linting import LintingCheck
+
+        check = LintingCheck()
+        with (
+            patch(
+                "pycmdcheck.subprocess_runner.shutil.which",
+                return_value="/usr/bin/ruff",
+            ),
+            patch("pycmdcheck.subprocess_runner.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(
+                returncode=2,
+                stdout="",
+                stderr="error: invalid value 'bogus' for '--select'\n",
+            )
+            result = check.run(temp_package, {"tool": "ruff"})
+        assert result.status == CheckStatus.ERROR
+        assert "0 linting issue" not in result.message
+        assert any("invalid value" in d for d in result.details)
+
 
 class TestTypingCheckMocked:
     """Mocked subprocess tests for TypingCheck."""
@@ -159,3 +181,24 @@ class TestTypingCheckMocked:
             )
             result = check.run(temp_package, {"tool": "mypy"})
         assert result.status == CheckStatus.ERROR
+
+    def test_mypy_discovery_error_is_warning(self, temp_package: Path) -> None:
+        """mypy exit code 2 (discovery/config) -> WARNING, not 'type errors' (#9)."""
+        from pycmdcheck.checks.typing import TypingCheck
+
+        check = TypingCheck()
+        with (
+            patch(
+                "pycmdcheck.subprocess_runner.shutil.which",
+                return_value="/usr/bin/mypy",
+            ),
+            patch("pycmdcheck.subprocess_runner.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(
+                returncode=2,
+                stdout="src/foo.py: error: Duplicate module named 'foo'\n",
+                stderr="",
+            )
+            result = check.run(temp_package, {"tool": "mypy"})
+        assert result.status == CheckStatus.WARNING
+        assert "type error" not in result.message.lower()

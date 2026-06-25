@@ -18,17 +18,24 @@ def _build_check_registry() -> dict[str, type]:
     in the test environment.
     """
     from pycmdcheck.checks.build import BuildCheck
+    from pycmdcheck.checks.changelog import ChangelogCheck
+    from pycmdcheck.checks.ci import CICheck
+    from pycmdcheck.checks.citation import CitationCheck
+    from pycmdcheck.checks.community import CommunityCheck
     from pycmdcheck.checks.dependencies import DependenciesCheck
     from pycmdcheck.checks.docs import DocsCheck
+    from pycmdcheck.checks.doctests import DoctestsCheck
     from pycmdcheck.checks.formatting import FormattingCheck
     from pycmdcheck.checks.imports import ImportsCheck
     from pycmdcheck.checks.license import LicenseCheck
     from pycmdcheck.checks.linting import LintingCheck
     from pycmdcheck.checks.metadata import MetadataCheck
     from pycmdcheck.checks.py_typed import PyTypedCheck
+    from pycmdcheck.checks.python_versions import PythonVersionsCheck
     from pycmdcheck.checks.structure import StructureCheck
     from pycmdcheck.checks.tests import TestsCheck
     from pycmdcheck.checks.typing import TypingCheck
+    from pycmdcheck.checks.urls import URLsCheck
     from pycmdcheck.checks.version import VersionCheck
 
     return {
@@ -45,6 +52,13 @@ def _build_check_registry() -> dict[str, type]:
         "formatting": FormattingCheck,
         "version": VersionCheck,
         "py_typed": PyTypedCheck,
+        "community": CommunityCheck,
+        "ci": CICheck,
+        "changelog": ChangelogCheck,
+        "citation": CitationCheck,
+        "python_versions": PythonVersionsCheck,
+        "urls": URLsCheck,
+        "doctests": DoctestsCheck,
     }
 
 
@@ -117,6 +131,11 @@ description = "A test package"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
+authors = [{name = "Test Author", email = "test@example.com"}]
+classifiers = ["Development Status :: 3 - Alpha"]
+
+[project.urls]
+Homepage = "https://example.com"
 
 [build-system]
 requires = ["hatchling"]
