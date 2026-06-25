@@ -32,9 +32,9 @@ def run_checks(
         package_path: Path to the package directory to check. Can be a string
             or Path object. Will be resolved to an absolute path.
         checks: List of specific check names to run. If None, runs all checks
-            that are enabled in the configuration. Available built-in checks:
-            build, dependencies, docs, formatting, imports, license, linting,
-            metadata, py_typed, structure, tests, typing, version.
+            that are enabled in the configuration. The available check names are
+            discovered dynamically via entry points; run ``pycmdcheck --list``
+            to see the current set.
         skip: List of check names to skip, even if they would otherwise run.
         config: Pre-loaded configuration dictionary. If None, configuration
             is loaded from the package's pyproject.toml file.
@@ -50,19 +50,19 @@ def run_checks(
     Examples:
         Run all enabled checks:
 
-        >>> report = run_checks("/path/to/package")
-        >>> report.passed
+        >>> report = run_checks("/path/to/package")  # doctest: +SKIP
+        >>> report.passed  # doctest: +SKIP
         True
 
         Run specific checks only:
 
-        >>> report = run_checks(".", checks=["metadata", "tests"])
-        >>> len(report.results)
+        >>> report = run_checks(".", checks=["metadata", "tests"])  # doctest: +SKIP
+        >>> len(report.results)  # doctest: +SKIP
         2
 
         Run sequentially for debugging:
 
-        >>> report = run_checks(".", parallel=False)
+        >>> report = run_checks(".", parallel=False)  # doctest: +SKIP
     """
     package_path = Path(package_path).resolve()
     skip = skip or []

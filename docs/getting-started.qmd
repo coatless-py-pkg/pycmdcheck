@@ -44,7 +44,7 @@ Navigate to your Python package directory and run:
 pycmdcheck
 ```
 
-You'll see output like (abbreviated — a default run executes all 20 checks):
+You'll see output like (abbreviated — a default run executes every enabled check):
 
 ```
 Checking package: /path/to/your/package
@@ -62,7 +62,7 @@ Checking package: /path/to/your/package
 │  ✓  │ typing          │ No type errors found        │
 │  ✓  │ version         │ Version 0.1.0 is consistent │
 │  ℹ  │ ci              │ No CI configuration found   │
-│  …  │ …               │ … (all 20 checks run)       │
+│  …  │ …               │ … (all enabled checks run)  │
 └─────┴─────────────────┴─────────────────────────────┘
 
 18 ok | 2 note
@@ -101,7 +101,8 @@ Each check returns one of five statuses:
 
 ## Built-in Checks
 
-pycmdcheck includes 20 built-in checks:
+pycmdcheck ships the following built-in checks (run `pycmdcheck --list` for the
+authoritative, up-to-date set):
 
 | Check | Description |
 |-------|-------------|

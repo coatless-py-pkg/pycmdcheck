@@ -59,9 +59,9 @@ Run a predefined set of checks. Available profiles:
 |---------|--------|
 | `minimal` | metadata, structure, license |
 | `triage` | static checks only — no install, external tools, or network (for CI triage of arbitrary repos) |
-| `default` | the 13 core checks |
-| `pyopensci` | all 20 checks, with stricter docs settings |
-| `strict` | all 20 checks at maximum strictness |
+| `default` | the original core checks |
+| `pyopensci` | all checks, with stricter docs settings |
+| `strict` | all checks at maximum strictness |
 
 ```bash
 # pyOpenSci onboarding checks
@@ -89,7 +89,7 @@ List all available checks and exit.
 pycmdcheck --list
 ```
 
-Output (20 checks):
+Output:
 ```
                            Available Checks
 ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -168,7 +168,9 @@ pycmdcheck --no-parallel
 
 ### `-x, --fail-fast`
 
-Stop after the first check whose status matches `--fail-on`.
+Stop after the first check that returns an ERROR status. This is independent of
+`--fail-on` (which only affects the final exit code) — fail-fast always triggers
+on ERROR.
 
 ```bash
 pycmdcheck -x

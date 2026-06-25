@@ -66,10 +66,9 @@ def check(
 
     Args:
         path: Path to the package directory. Defaults to current directory.
-        checks: List of check names to run. If None, runs all enabled checks
-            from configuration. Available checks: build, dependencies, docs,
-            formatting, imports, license, linting, metadata, py_typed,
-            structure, tests, typing, version.
+        checks: Names of checks to run. If None, runs all enabled checks from
+            configuration. The available check names are discovered dynamically
+            via entry points; run ``pycmdcheck --list`` to see the current set.
         skip: List of check names to skip, even if enabled in configuration.
         config: Pre-loaded configuration dictionary. If None, configuration
             is loaded from the package's pyproject.toml.
@@ -84,8 +83,8 @@ def check(
         Basic usage - check current directory:
 
         >>> from pycmdcheck import check  # doctest: +SKIP
-        >>> report = check(".")
-        >>> report.passed
+        >>> report = check(".")  # doctest: +SKIP
+        >>> report.passed  # doctest: +SKIP
         True
 
         Run only specific checks:

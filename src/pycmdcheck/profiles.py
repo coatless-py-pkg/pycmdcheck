@@ -9,7 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-# All checks that ship with pycmdcheck
+# The built-in check roster. Kept explicit (rather than derived from
+# discover_checks()) because "built-in" must exclude third-party plugins that
+# register the same entry-point group. A test asserts this stays equal to the
+# checks registered in pyproject.toml, so it cannot silently drift.
 ALL_CHECKS: frozenset[str] = frozenset(
     {
         "metadata",
@@ -36,7 +39,8 @@ ALL_CHECKS: frozenset[str] = frozenset(
     }
 )
 
-# Original 13 checks (pre-pyOpenSci)
+# Original core checks (pre-pyOpenSci). This is an intentional, curated subset
+# — keep it explicit; it is NOT meant to track ALL_CHECKS.
 ORIGINAL_CHECKS: frozenset[str] = frozenset(
     {
         "metadata",
@@ -110,7 +114,7 @@ PROFILES: dict[str, Profile] = {
     ),
     "default": Profile(
         name="default",
-        description="Standard checks (original 13 built-in checks)",
+        description="Standard checks (the original core built-in checks)",
         checks=ORIGINAL_CHECKS,
     ),
     "pyopensci": Profile(
@@ -145,7 +149,7 @@ def get_profile(name: str) -> Profile | None:
     """Look up a profile by name.
 
     Args:
-        name: Profile name (minimal, default, pyopensci, strict).
+        name: Profile name (minimal, triage, default, pyopensci, strict).
 
     Returns:
         The Profile, or None if not found.

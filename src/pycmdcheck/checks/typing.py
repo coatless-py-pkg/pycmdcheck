@@ -74,6 +74,8 @@ class TypingCheck(BaseCheck):
             A CheckResult with:
 
             - OK status if no type errors found
+            - WARNING status if mypy cannot analyze the package due to a
+              configuration/layout error (mypy exit code 2)
             - ERROR status if type errors found or checker fails
             - SKIPPED status if the type checker is not installed
         """

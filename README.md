@@ -152,9 +152,9 @@ Profiles bundle checks for common use cases:
 |---------|-------------|--------|
 | `minimal` | Quick sanity checks | metadata, structure, license |
 | `triage` | Static checks only — no install, external tools, or network (for CI triage of arbitrary repos) | All static checks (excludes tests, imports, dependencies, build, linting, typing, formatting, doctests, urls) |
-| `default` | Standard quality checks | All 13 core checks |
-| `pyopensci` | pyOpenSci onboarding | All 20 checks with stricter docs settings |
-| `strict` | Maximum strictness | All 20 checks with strict typing |
+| `default` | Standard quality checks | All original core checks |
+| `pyopensci` | pyOpenSci onboarding | All checks with stricter docs settings |
+| `strict` | Maximum strictness | All checks with strict typing |
 
 ```bash
 # Run pyOpenSci onboarding checks
