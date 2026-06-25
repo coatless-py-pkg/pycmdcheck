@@ -55,6 +55,28 @@ ORIGINAL_CHECKS: frozenset[str] = frozenset(
     }
 )
 
+# Checks that require installing the package, running external tools
+# (pytest/ruff/mypy), or network access. These produce false results when run
+# against an arbitrary repository that has NOT been installed (e.g. a CI triage
+# bot), so they are excluded from the static-only "triage" profile.
+DYNAMIC_CHECKS: frozenset[str] = frozenset(
+    {
+        "tests",  # runs pytest
+        "imports",  # resolves imports against the running interpreter
+        "dependencies",  # resolves imports against the installed environment
+        "build",  # builds the package
+        "linting",  # runs ruff/flake8
+        "typing",  # runs mypy/pyright
+        "formatting",  # runs ruff/black
+        "doctests",  # runs pytest --doctest
+        "urls",  # validates links over the network
+    }
+)
+
+# Static, no-install, no-network checks — safe to run against an arbitrary
+# submitted repository without building or installing it.
+STATIC_CHECKS: frozenset[str] = ALL_CHECKS - DYNAMIC_CHECKS
+
 
 @dataclass(frozen=True)
 class Profile:
@@ -71,6 +93,20 @@ PROFILES: dict[str, Profile] = {
         name="minimal",
         description="Quick sanity checks (metadata, structure, license)",
         checks=frozenset({"metadata", "structure", "license"}),
+    ),
+    "triage": Profile(
+        name="triage",
+        description=(
+            "Static packaging/docs checks only — no install, external tools, "
+            "or network (for CI triage of arbitrary repositories)"
+        ),
+        checks=STATIC_CHECKS,
+        config_overrides={
+            "docs": {
+                "require_readme": True,
+                "check_readme_sections": True,
+            },
+        },
     ),
     "default": Profile(
         name="default",

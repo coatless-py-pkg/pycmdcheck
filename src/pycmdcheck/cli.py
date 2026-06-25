@@ -12,7 +12,7 @@ from rich.text import Text
 
 from pycmdcheck.config import load_config
 from pycmdcheck.discovery import list_available_checks
-from pycmdcheck.profiles import get_profile, list_profiles
+from pycmdcheck.profiles import PROFILES, get_profile, list_profiles
 from pycmdcheck.results import CheckStatus, Report
 from pycmdcheck.runner import run_checks
 
@@ -72,7 +72,7 @@ console = Console()
 )
 @click.option(
     "--profile",
-    type=click.Choice(["minimal", "default", "pyopensci", "strict"]),
+    type=click.Choice(list(PROFILES)),
     default=None,
     help="Use a predefined check profile.",
 )

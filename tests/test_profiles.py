@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 
 from pycmdcheck.cli import main
-from pycmdcheck.profiles import get_profile, list_profiles
+from pycmdcheck.profiles import DYNAMIC_CHECKS, get_profile, list_profiles
 
 
 class TestProfileModule:
@@ -50,6 +50,18 @@ class TestProfileModule:
         docs_config = prof.config_overrides.get("docs", {})
         assert docs_config.get("check_docstrings") is True
         assert docs_config.get("check_readme_sections") is True
+
+    def test_triage_profile_excludes_dynamic_checks(self) -> None:
+        """The triage profile contains no install/tool/network checks."""
+        prof = get_profile("triage")
+        assert prof is not None
+        assert prof.checks.isdisjoint(DYNAMIC_CHECKS)
+        # It still includes the core static checks.
+        for static in ("metadata", "structure", "license", "docs", "version"):
+            assert static in prof.checks
+        # And excludes the env-dependent / network ones.
+        for dynamic in ("imports", "dependencies", "linting", "typing", "urls"):
+            assert dynamic not in prof.checks
 
 
 class TestCLIProfile:
