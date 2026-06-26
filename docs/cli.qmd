@@ -51,6 +51,19 @@ pycmdcheck --fail-on error --fail-on warning
 pycmdcheck --fail-on error --fail-on warning --fail-on note
 ```
 
+### `--exit-zero`
+
+Always exit `0` regardless of check results — report status only via the output
+(or `--json`). The exit code then reflects whether pycmdcheck *ran*, not what it
+*found*: `0` means it ran successfully, and a non-zero code means pycmdcheck
+itself could not run (e.g. a usage error). This is the recommended mode for CI
+that parses the results itself and should only treat tool failures as job
+failures.
+
+```bash
+pycmdcheck --json --exit-zero --profile triage
+```
+
 ### `--profile`
 
 Run a predefined set of checks. Available profiles:
@@ -205,9 +218,9 @@ pycmdcheck --help
 
 | Code | Meaning |
 |------|---------|
-| 0 | All checks passed (no status matching `--fail-on`) |
-| 1 | One or more checks failed (status matched `--fail-on`) |
-| 2 | Invalid usage (e.g., an unknown check name passed to `-c`/`--check`) |
+| 0 | All checks passed (no status matching `--fail-on`), or any result with `--exit-zero` |
+| 1 | One or more checks failed (status matched `--fail-on`); suppressed by `--exit-zero` |
+| 2 | Invalid usage (e.g., an unknown check name passed to `-c`/`--check`); **not** suppressed by `--exit-zero` |
 
 ## Examples
 

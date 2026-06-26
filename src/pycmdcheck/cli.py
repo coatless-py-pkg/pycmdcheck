@@ -41,6 +41,16 @@ console = Console()
     help="Exit with non-zero code on these statuses. Default: error",
 )
 @click.option(
+    "--exit-zero",
+    "exit_zero",
+    is_flag=True,
+    help=(
+        "Always exit 0 regardless of check results (report status via output "
+        "or --json only). The exit code then reflects whether pycmdcheck ran, "
+        "not what it found — useful for CI that parses results itself."
+    ),
+)
+@click.option(
     "--list",
     "list_checks",
     is_flag=True,
@@ -89,6 +99,7 @@ def main(
     check: tuple[str, ...],
     skip: tuple[str, ...],
     fail_on: tuple[str, ...],
+    exit_zero: bool,
     list_checks: bool,
     verbose: bool,
     json_output: bool,
@@ -197,8 +208,10 @@ def main(
     else:
         _output_rich(report, verbose)
 
-    # Determine exit code
-    if report.failed_on(list(fail_on)):
+    # Determine exit code. With --exit-zero, findings never change the exit
+    # code (the caller is expected to read the results), so a non-zero exit
+    # then reflects only that pycmdcheck itself could not run.
+    if report.failed_on(list(fail_on)) and not exit_zero:
         sys.exit(1)
 
 
