@@ -25,6 +25,34 @@ class TestCLIBasic:
         )
         assert result.exit_code == 1, result.output
 
+    def test_exit_zero_suppresses_findings_exit(self, bad_package) -> None:
+        """--exit-zero exits 0 even when checks fail (results still reported)."""
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                str(bad_package),
+                "--no-parallel",
+                "--exit-zero",
+                "--json",
+                "-c",
+                "metadata",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        # The failure is still reported in the output, not hidden.
+        data = json.loads(result.output)
+        assert data["passed"] is False
+        assert data["summary"]["error"] >= 1
+
+    def test_exit_zero_still_reports_usage_errors(self, temp_package) -> None:
+        """--exit-zero suppresses findings, not genuine misuse (unknown check)."""
+        runner = CliRunner()
+        result = runner.invoke(
+            main, [str(temp_package), "--exit-zero", "-c", "nonexistent"]
+        )
+        assert result.exit_code == 2
+
     def test_invalid_path_errors(self) -> None:
         runner = CliRunner()
         result = runner.invoke(main, ["/nonexistent/path"])

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2026-06-25
 
+### Added
+
+- `--exit-zero` CLI flag: always exit `0` regardless of check results, so the
+  exit code reflects whether pycmdcheck ran rather than what it found. Intended
+  for CI/automation that parses the results (e.g. `--json`) itself.
+
 ### Fixed
 
 - Project URLs now point to the actual repository
@@ -21,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Documentation and docstrings no longer hard-code the built-in check list;
+  they reference `pycmdcheck --list`, and a test keeps `ALL_CHECKS` in sync with
+  the registered entry points.
 - Updated GitHub Actions to current versions (`checkout` v7, `setup-uv` v8.2.0,
   `upload-artifact` v7, `download-artifact` v8, `gh-action-pypi-publish` v1.14.0).
 
