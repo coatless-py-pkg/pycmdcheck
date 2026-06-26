@@ -1,6 +1,12 @@
-# pycmdcheck
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-pycmdcheck-dark-animated.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-pycmdcheck-light-animated.svg">
+    <img alt="pycmdcheck" src="assets/logo-pycmdcheck-light-static.svg" width="220">
+  </picture>
+</p>
 
-A Python package quality checker inspired by R's `R CMD check`.
+<p align="center">A Python package quality checker inspired by R's <code>R CMD check</code>.</p>
 
 ## Installation
 
