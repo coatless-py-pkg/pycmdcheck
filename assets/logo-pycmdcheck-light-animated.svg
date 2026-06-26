@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 600" width="520" height="600" role="img" aria-label="pycmdcheck">
+  <title>pycmdcheck</title>
+  <polygon points="260,24 499,162 499,438 260,576 21,438 21,162" fill="#244D6E" stroke="#FFD43B" stroke-width="22" stroke-linejoin="round"/>
+  <path d="M 168,184 L 212,228 L 168,272" fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 248,236 L 290,280 L 374,178" fill="none" stroke="#FFD43B" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke" values="#FFD43B;#FFD43B;#3FB950;#3FB950;#FFD43B" keyTimes="0;0.62;0.74;0.86;1" dur="3.2s" repeatCount="indefinite"/></path>
+  <text x="260" y="424" text-anchor="middle" font-family="system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif" font-size="54" font-weight="800" letter-spacing="-1.5"><tspan fill="#FFD43B">py</tspan><tspan fill="#FFFFFF">cmdcheck</tspan></text>
+</svg>

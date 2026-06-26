@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 600" width="520" height="600">
+  <title>pycmdcheck mark</title>
+  <polygon points="260,24 499,162 499,438 260,576 21,438 21,162"
+           fill="#244D6E" stroke="#FFD43B" stroke-width="24" stroke-linejoin="round"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 146,250 L 198,302 L 146,354" stroke="#FFFFFF" stroke-width="34"/>
+    <path d="M 236,308 L 286,362 L 380,238" stroke="#FFD43B" stroke-width="48"/>
+  </g>
+</svg>
