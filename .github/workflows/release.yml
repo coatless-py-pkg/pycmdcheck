@@ -87,3 +87,10 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag \
             --notes "What is new is listed in [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/CHANGELOG.md)."
+
+  development-version:
+    name: Start the development version
+    needs: github-release
+    permissions:
+      contents: write  # Needed to commit the changelog heading
+    uses: ./.github/workflows/development-version.yml

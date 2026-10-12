@@ -525,3 +525,41 @@ def test_pinned_versions_name_the_version_of_the_package(repo_root: Path) -> Non
     assert stale == []
     # The README shows one pinned command, so the settings have a line to keep.
     assert _PINNED_RE.search(_read(repo_root / "README.md"))
+
+
+# A release heading of the changelog, such as "# pycmdcheck 1.2.3".
+_RELEASE_HEADING_RE = re.compile(r"^# pycmdcheck (.+)$", re.MULTILINE)
+_UNRELEASED = "(development version)"
+
+
+def test_changelog_starts_with_this_version_or_unreleased_work(
+    repo_root: Path,
+) -> None:
+    """The top of the changelog is this version, or the work after it.
+
+    A bump renames the heading for unreleased work to the new version. Were
+    that heading missing, the bump would leave the changelog alone and the
+    release would have no section, so this test fails on the bump.
+    """
+    pyproject = tomllib.loads(_read(repo_root / "pyproject.toml"))
+    version = pyproject["project"]["version"]
+    headings = _RELEASE_HEADING_RE.findall(_read(repo_root / "CHANGELOG.md"))
+    released = [heading for heading in headings if heading != _UNRELEASED]
+    assert headings[0] in {version, _UNRELEASED}
+    assert released[0] == version
+    assert headings.count(_UNRELEASED) <= 1
+
+
+def test_workflow_adds_the_heading_that_the_bump_renames(repo_root: Path) -> None:
+    """The heading a release leaves behind is the one the bump looks for."""
+    workflow = repo_root / ".github" / "workflows" / "development-version.yml"
+    if not workflow.is_file():
+        pytest.skip("needs .github/, which a source distribution does not ship")
+    pyproject = tomllib.loads(_read(repo_root / "pyproject.toml"))
+    renamed = [
+        entry["search"]
+        for entry in pyproject["tool"]["bumpversion"]["files"]
+        if entry.get("filename") == "CHANGELOG.md"
+    ]
+    assert renamed == [f"# pycmdcheck {_UNRELEASED}"]
+    assert f"heading='{renamed[0]}'" in _read(workflow)
