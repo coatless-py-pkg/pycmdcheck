@@ -232,7 +232,10 @@ class TestLabel:
     """The first line of a report names the file beside the profile."""
 
     def test_text_and_markdown(self, config_file, project, calls) -> None:
-        path = config_file(EXAMPLE, "my_bot*.toml")
+        try:
+            path = config_file(EXAMPLE, "my_bot*.toml")
+        except OSError:
+            pytest.skip("this system allows no * in a file name")
         text = _run("--config", path, str(project)).output
         assert "(profile: triage, config: my_bot*.toml)" in text
         narrowed = _run("--config", path, "-c", "docs", str(project)).output

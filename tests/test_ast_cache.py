@@ -4,6 +4,7 @@ import ast
 import sys
 import warnings
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -33,15 +34,23 @@ def _reason(path: Path) -> str:
 def _patch_parse(
     monkeypatch: pytest.MonkeyPatch, error: BaseException | None = None
 ) -> list[str]:
-    """Record the files given to ast.parse, and make it raise *error* if set."""
+    """Record the files given to ast.parse, and make it raise *error* if set.
+
+    A call that names no file is passed on untouched. The coverage tracer
+    makes such calls of its own on Python 3.14.
+    """
     calls: list[str] = []
     real_parse = ast.parse
 
-    def fake_parse(source: bytes, filename: str = "<unknown>") -> ast.Module:
+    def fake_parse(
+        source: Any, filename: Any = "<unknown>", *args: Any, **kwargs: Any
+    ) -> Any:
+        if filename == "<unknown>":
+            return real_parse(source, *args, **kwargs)
         calls.append(filename)
         if error is not None:
             raise error
-        return real_parse(source, filename=filename)
+        return real_parse(source, filename, *args, **kwargs)
 
     monkeypatch.setattr(ast_cache.ast, "parse", fake_parse)
     return calls

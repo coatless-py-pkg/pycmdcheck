@@ -413,7 +413,9 @@ class TestFormattingCheck:
         tool(SubprocessResult(returncode=1, stderr=stderr))
         result = FormattingCheck().run(temp_package, {"tool": "black"})
         assert result.message == "1 file(s) need reformatting"
-        assert result.details[1:] == ["would reformat src/mypackage/__init__.py"]
+        # The rest of the line is as black wrote it, backslashes on Windows.
+        shown = Path("src", "mypackage", "__init__.py")
+        assert result.details[1:] == [f"would reformat {shown}"]
 
 
 class TestHints:
