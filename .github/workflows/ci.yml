@@ -105,6 +105,8 @@ jobs:
           python-version: "3.12"
       - name: Build sdist and wheel
         run: uv build
+      - name: Check the metadata as the upload to PyPI does
+        run: uvx twine check --strict dist/*
       - name: Check that the wheel holds the Agent Skill
         # grep prints the line it finds and fails when there is none. The
         # line must start with the path, so a copy under src/ does not count.

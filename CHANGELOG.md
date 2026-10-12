@@ -1,21 +1,12 @@
-# Changelog
+# pycmdcheck 0.2.0
 
-All notable changes to pycmdcheck will be documented in this file.
+This release raises fewer false alarms and explains every finding.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [0.2.0] - 2026-10-12
-
-This release raises fewer false alarms and explains every finding. On 18 real
-repositories checked with the `triage` profile, errors and warnings fell from
-11 to 4, and 9 of the 11 were false alarms.
-
-### New features
+## New features
 
 - Every finding now has a rule code, such as `license.missing`, and a
   one-sentence suggestion that says what to do about it. `--verbose` shows
-  the suggestions, `--list-rules` lists all 81 rules, and the JSON report
+  the suggestions, `--list-rules` lists every rule, and the JSON report
   holds both under `findings` in each result.
 
 - `--format markdown` writes a report made for a pull request or issue
@@ -65,7 +56,7 @@ repositories checked with the `triage` profile, errors and warnings fell from
   findings, and a `profile=` argument for `check()` and `run_checks()`. A
   custom check that reports no findings still works.
 
-### Breaking changes
+## Breaking changes
 
 - Python 3.10 is no longer supported. pycmdcheck needs Python 3.11 or later.
 
@@ -135,7 +126,7 @@ repositories checked with the `triage` profile, errors and warnings fell from
   `CITATION_EXTENSIONS`, `CONTRIBUTING_STEMS` and `CODE_OF_CONDUCT_STEMS`.
   Several undocumented helpers of `pycmdcheck.package_layout` are gone too.
 
-### Minor improvements and fixes
+## Minor improvements and fixes
 
 - `--profile pyopensci` and `--profile strict` now set the minimum docstring
   coverage to 50% and 80%, so missing docstrings give a note only below that
@@ -239,73 +230,50 @@ repositories checked with the `triage` profile, errors and warnings fell from
   an AI assistant, and is published at
   <https://py-pkg.thecoatlessprofessor.com/pycmdcheck/>.
 
-## [0.1.1] - 2026-06-25
+# pycmdcheck 0.1.1
 
-### Added
+- `--exit-zero` always exits with code 0, whatever the checks find, so the
+  exit code says whether pycmdcheck ran. It is for automation that reads the
+  results itself, for example from `--json`.
 
-- `--exit-zero` flag for the command line interface (CLI). It always exits
-  with `0` regardless of check results, so the exit code reflects whether
-  pycmdcheck ran rather than what it found. Intended for CI and other
-  automation that parses the results itself, for example from `--json`.
+- Project URLs now point to the repository at
+  `github.com/coatless-py-pkg/pycmdcheck`.
 
-### Fixed
+- Installation instructions now use `pip install pycmdcheck`.
 
-- Project URLs now point to the actual repository
-  (`github.com/coatless-py-pkg/pycmdcheck`). The previously declared
-  `pycmdcheck/pycmdcheck` URLs referenced a repository that does not exist (404).
-- Installation instructions use `pip install pycmdcheck` now that the package is
-  published on PyPI.
-- Corrected inaccurate docstrings (the `metadata`/`tests`/`structure`/`typing`
-  Returns sections, the `check`/`run_checks` built-in-check lists, `get_profile`,
-  and `discover_checks`) and the illustrative API doctests that crashed under
-  `pytest --doctest-modules`.
+- Docstrings of the Python API now match what the functions return, and
+  their examples run under `pytest --doctest-modules`.
 
-### Changed
+# pycmdcheck 0.1.0
 
-- Documentation and docstrings no longer hard-code the built-in check list.
-  They reference `pycmdcheck --list`, and a test keeps `ALL_CHECKS` in sync with
-  the registered entry points.
-- Updated GitHub Actions to current versions (`checkout` v7, `setup-uv` v8.2.0,
-  `upload-artifact` v7, `download-artifact` v8, `gh-action-pypi-publish` v1.14.0).
+First release on PyPI.
 
-## [0.1.0] - 2026-06-25
+- `check()` and the `pycmdcheck` command check the quality of a Python
+  package, with a text report for the terminal and a JSON report for
+  automation.
 
-First release of pycmdcheck on PyPI.
-
-### Added
-
-- Core `check()` function and `pycmdcheck` CLI, with Rich terminal output and
-  JSON output for CI integration.
-- Built-in checks: `metadata`, `structure`, `tests`, `linting`, `typing`,
+- Built-in checks `metadata`, `structure`, `tests`, `linting`, `typing`,
   `imports`, `license`, `docs`, `dependencies`, `build`, `formatting`,
   `version`, `py_typed`, `community`, `ci`, `changelog`, `citation`,
-  `python_versions`, `urls`, `doctests`.
-- Profile system with five profiles (`minimal`, `triage`, `default`,
-  `pyopensci`, `strict`), selected with `--profile` and listed with
-  `--list-profiles`. The `triage` profile runs only static,
-  no-install/no-network checks, intended for CI triage of arbitrary
-  (un-installed) repositories.
-- Configuration via `[tool.pycmdcheck]` in pyproject.toml, a plugin system via
-  entry points for custom checks, and parallel check execution.
-- Support for legacy Poetry projects (`[tool.poetry]` with no PEP 621
-  `[project]` table) across the metadata, version, python_versions, and
-  dependencies checks.
-- Recognition of PEP 420 namespace packages, single-file modules, and
-  native-extension build backends (maturin and scikit-build) in the
-  `structure` check. This entry first named setuptools-rust as well, which
-  0.1.0 and 0.1.1 did not detect. See the `structure` entry under 0.2.0.
-- `formatting` check auto-detects the configured formatter (ruff vs black) and
-  is skipped when none is configured.
-- GitHub Actions workflows for CI (lint + type-check + pytest on 3.10 to
-  3.13) and for a tag-triggered PyPI release via Trusted Publishing, which
-  uses OpenID Connect (OIDC).
-- Public API: `CheckResult`, `CheckStatus`, `Report`, and the `BaseCheck`
-  abstract class for custom checks.
+  `python_versions`, `urls` and `doctests`.
 
-The checks are intentionally lenient to avoid false positives on legitimate
-real-world packages (PEP 621 `dynamic` fields, dual-license filenames, RST
-READMEs, community files under `.github/`/`docs/`, dependency extras, and more).
+- `--profile` runs a set of checks, and `--list-profiles` lists the sets,
+  which are `minimal`, `triage`, `default`, `pyopensci` and `strict`. The
+  `triage` profile only reads files, so it can check a repository that is
+  not installed.
 
-[0.2.0]: https://github.com/coatless-py-pkg/pycmdcheck/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/coatless-py-pkg/pycmdcheck/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/coatless-py-pkg/pycmdcheck/releases/tag/v0.1.0
+- `[tool.pycmdcheck]` in `pyproject.toml` configures the checks, and custom
+  checks plug in through entry points.
+
+- `metadata`, `version`, `python_versions` and `dependencies` read legacy
+  Poetry projects, which have a `[tool.poetry]` table and no `[project]`
+  table.
+
+- `structure` recognizes namespace packages, single-file modules, and the
+  native build backends maturin and scikit-build.
+
+- `formatting` finds the configured formatter, ruff or black, and is skipped
+  when none is configured.
+
+- The Python API exports `CheckResult`, `CheckStatus`, `Report` and
+  `BaseCheck` for custom checks.
