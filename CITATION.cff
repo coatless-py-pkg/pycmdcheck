@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: pycmdcheck
+authors:
+  - given-names: James Joseph
+    family-names: Balamuta
+repository-code: "https://github.com/coatless-py-pkg/pycmdcheck"
+url: "https://py-pkg.thecoatlessprofessor.com/pycmdcheck/"
+license: MIT
+abstract: >-
+  pycmdcheck runs a set of quality checks on a Python package, modelled on
+  R CMD check. It looks at metadata, structure, tests, linting, typing,
+  documentation and more, and reports the results on the command line, as
+  JSON, or through a Python API.

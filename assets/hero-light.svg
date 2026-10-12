@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 367" font-family="system-ui, -apple-system, sans-serif" font-size="12" role="img" aria-labelledby="t d">
+  <title id="t">Check a Python package without installing it</title>
+  <desc id="d">Three steps. One, a package you did not write, fetched but never installed. Two, a single pycmdcheck command using the triage profile. Three, a health report of twelve checks covering the changelog, continuous integration, citation file, community files, documentation, license, metadata, py.typed marker, supported Python versions, source layout, test suite and version, with a summary of eleven ok and one skipped. The report shown is the output for pycmdcheck's own repository, where the version check is skipped because the package looks its version up when it runs, which leaves nothing to compare. Nothing in the package is built, imported or executed at any point.</desc>
+  <circle cx="31" cy="22" r="11" fill="#1e40af"/>
+  <text x="31" y="26" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">1</text>
+  <text x="50" y="27" text-anchor="start" fill="#334155" font-size="11.5" font-weight="700" letter-spacing="0.6">A SUBMITTED PACKAGE</text>
+  <rect x="20" y="48" width="170" height="283" rx="10" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <circle cx="233" cy="22" r="11" fill="#1e40af"/>
+  <text x="233" y="26" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">2</text>
+  <text x="252" y="27" text-anchor="start" fill="#334155" font-size="11.5" font-weight="700" letter-spacing="0.6">ONE COMMAND</text>
+  <rect x="222" y="48" width="186" height="283" rx="10" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <circle cx="451" cy="22" r="11" fill="#1e40af"/>
+  <text x="451" y="26" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">3</text>
+  <text x="470" y="27" text-anchor="start" fill="#334155" font-size="11.5" font-weight="700" letter-spacing="0.6">A HEALTH REPORT</text>
+  <rect x="440" y="48" width="460" height="283" rx="10" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="34" y="74" text-anchor="start" fill="#1e40af" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">riverplot/</text>
+  <text x="46" y="92" text-anchor="start" fill="#334155" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">pyproject.toml</text>
+  <text x="46" y="110" text-anchor="start" fill="#334155" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">README.md</text>
+  <text x="46" y="128" text-anchor="start" fill="#334155" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">LICENSE</text>
+  <text x="46" y="146" text-anchor="start" fill="#334155" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">CHANGELOG.md</text>
+  <text x="46" y="164" text-anchor="start" fill="#1e40af" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">src/riverplot/</text>
+  <text x="46" y="182" text-anchor="start" fill="#1e40af" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">tests/</text>
+  <text x="34" y="265" text-anchor="start" fill="#64748b" font-size="9.5">Fetched, never installed.</text>
+  <text x="34" y="281" text-anchor="start" fill="#64748b" font-size="9.5">You do not intend to run</text>
+  <text x="34" y="295" text-anchor="start" fill="#64748b" font-size="9.5">a line of it.</text>
+  <rect x="232" y="60" width="166" height="60" rx="7" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="242" y="80" text-anchor="start" fill="#334155" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">$ pycmdcheck ./riverplot</text>
+  <text x="252" y="98" text-anchor="start" fill="#0f766e" font-size="10" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">--profile triage</text>
+  <text x="236" y="144" text-anchor="start" fill="#64748b" font-size="9.5">The triage profile runs</text>
+  <text x="236" y="158" text-anchor="start" fill="#64748b" font-size="9.5">only the checks that read</text>
+  <text x="236" y="172" text-anchor="start" fill="#64748b" font-size="9.5">files.</text>
+  <text x="236" y="200" text-anchor="start" fill="#334155" font-size="9.5" font-weight="700">Nothing is built.</text>
+  <text x="236" y="216" text-anchor="start" fill="#334155" font-size="9.5" font-weight="700">Nothing is imported.</text>
+  <text x="236" y="232" text-anchor="start" fill="#334155" font-size="9.5" font-weight="700">Nothing reaches the</text>
+  <text x="236" y="246" text-anchor="start" fill="#334155" font-size="9.5" font-weight="700">network.</text>
+  <rect x="450" y="58" width="440" height="263" rx="7" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="466" y="78" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="78" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">changelog</text>
+  <text x="586" y="78" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Changelog present</text>
+  <text x="466" y="95" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="95" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">ci</text>
+  <text x="586" y="95" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">CI configured (GitHub Actions)</text>
+  <text x="466" y="112" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="112" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">citation</text>
+  <text x="586" y="112" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Citation file present</text>
+  <text x="466" y="129" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="129" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">community</text>
+  <text x="586" y="129" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Community health files present</text>
+  <text x="466" y="146" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="146" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">docs</text>
+  <text x="586" y="146" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Documentation present</text>
+  <text x="466" y="163" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="163" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">license</text>
+  <text x="586" y="163" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">License file present</text>
+  <text x="466" y="180" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="180" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">metadata</text>
+  <text x="586" y="180" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Package metadata is valid</text>
+  <text x="466" y="197" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="197" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">py_typed</text>
+  <text x="586" y="197" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">py.typed marker present</text>
+  <text x="466" y="214" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="214" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">python_versions</text>
+  <text x="586" y="214" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Python version requirement is current</text>
+  <text x="466" y="231" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="231" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">structure</text>
+  <text x="586" y="231" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Valid src layout structure</text>
+  <text x="466" y="248" text-anchor="middle" fill="#166534" font-size="11" font-weight="700">✓</text>
+  <text x="480" y="248" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">test_suite</text>
+  <text x="586" y="248" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Test suite present</text>
+  <text x="466" y="265" text-anchor="middle" fill="#64748b" font-size="11" font-weight="700">○</text>
+  <text x="480" y="265" text-anchor="start" fill="#334155" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">version</text>
+  <text x="586" y="265" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Version set dynamically (e.g. importlib.metadata)</text>
+  <line x1="460" y1="288" x2="880" y2="288" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="466" y="306" text-anchor="start" fill="#64748b" font-size="9.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">11 ok | 1 skipped</text>
+  <text x="874" y="306" text-anchor="end" fill="#166534" font-size="9.5" font-weight="700" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">All checks passed!</text>
+  <line x1="195" y1="189.5" x2="208" y2="189.5" stroke="#1e40af" stroke-width="2"/>
+  <polygon points="208,184.5 217,189.5 208,194.5" fill="#1e40af"/>
+  <line x1="413" y1="189.5" x2="426" y2="189.5" stroke="#1e40af" stroke-width="2"/>
+  <polygon points="426,184.5 435,189.5 426,194.5" fill="#1e40af"/>
+  <text x="460" y="357" text-anchor="middle" fill="#94a3b8" font-size="9.5">Output of pycmdcheck --profile triage on pycmdcheck's own repository. Twelve checks, no installation.</text>
+</svg>

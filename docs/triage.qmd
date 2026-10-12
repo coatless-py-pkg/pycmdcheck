@@ -1,0 +1,504 @@
+---
+title: Checking Untrusted Code
+---
+
+Sometimes you have to look at a repository you did not write, such as a
+package submitted for review. You want to know what state it is in without
+running anything it contains. The `triage` profile is made for that.
+
+## The Command
+
+```bash
+timeout 120 pycmdcheck --profile triage --json --exit-zero path/to/repo > report.json
+```
+
+Each part has a reason.
+
+| Part | Reason |
+|------|--------|
+| `timeout 120` | Stops the run after 120 seconds. `timeout` is part of GNU coreutils. See [Limits](#limits). |
+| `--profile triage` | Runs only the checks that read files |
+| `--json` | Prints a report another program can read |
+| `--exit-zero` | Makes the exit code say whether pycmdcheck ran, not what it found |
+| `path/to/repo` | Names the repository as an argument, so pycmdcheck is not started from inside it |
+
+To use pycmdcheck without installing it, run it through `uvx`.
+
+```bash
+uvx pycmdcheck --profile triage path/to/repo
+```
+
+## What the Profile Runs and Leaves Out
+
+The profile runs 12 checks, which are `changelog`, `ci`, `citation`,
+`community`, `docs`, `license`, `metadata`, `py_typed`, `python_versions`,
+`structure`, `test_suite` and `version`. Each of them reads files and nothing
+else. They install nothing, start no other program and open no network
+connection.
+
+Two of them answer questions that a reviewer would otherwise need to run
+something for.
+
+- `test_suite` says whether the repository has tests. It looks for test
+  directories and test files and does not run them. A repository with none
+  gets a warning with the code `test_suite.missing`.
+- `docs` says whether there is documentation beyond the README. It looks for
+  the setup of a site builder such as Sphinx or MkDocs, for pages in a `docs/`
+  directory, and for a documentation link in the metadata. A repository with
+  none gets a note with the code `docs.missing-site`.
+
+[Configuration](configuration.qmd#test_suite) lists what each of the two
+looks for.
+
+The other eight built-in checks are left out.
+
+| Check | Why it is left out |
+|-------|--------------------|
+| `tests`, `doctests` | They run the project's tests and doctests, which executes its code. Whether there are tests at all is reported by `test_suite`. |
+| `build` | It runs the project's build, which executes its code |
+| `linting`, `typing` | They start tools that read the project's configuration, and that configuration can name a plugin or a start-up hook for the tool to load |
+| `formatting` | It starts a formatter, which has to be installed |
+| `dependencies` | It reads the metadata of the packages installed next to pycmdcheck to learn which modules a dependency provides, so the answer depends on your environment |
+| `urls` | It sends requests to addresses the repository chose. It refuses [local and private hosts](configuration.qmd#local-and-private-hosts), connects only to the address it tested, and follows a redirect only to another `http` or `https` address. It still contacts any public host the repository names, and behind a proxy the proxy looks the names up. |
+
+The repository cannot change this selection, and no setting in the
+`[tool.pycmdcheck]` table of its `pyproject.toml` changes a result.
+
+- An enable flag in that table, such as `license = false`, does not take a
+  check out of the profile.
+- `docs` is the only one of the 12 checks that has options, and the profile
+  sets all five of them. They are `require_readme`, `check_readme_sections`,
+  `check_docs_site`, `check_docstrings` and `min_docstring_coverage`. The
+  repository's values for them are ignored. It can neither relax what is
+  asked of the README nor switch the docstring scan on.
+- Custom checks are outside every profile, so none runs here even when one is
+  installed. The deprecated `imports` check is in no profile either.
+
+One setting in that table still acts. When you do not pass `--fail-on`, the
+repository's [`fail_on`](configuration.qmd#fail_on) list is used, and it then
+decides three things.
+
+- The exit code of your run.
+- The `fail_on` and `failed` keys of the JSON report.
+- The closing line of the text and Markdown reports.
+
+It can only make the run stricter, because an error fails the run under
+every setting. `--exit-zero` takes the exit code away and leaves the other
+two. Pass `--fail-on` yourself to take all three away, or read `passed` and
+`summary`, which no setting changes.
+
+A settings file given with [`--config`](cli.qmd#config-file) takes even that
+away. The `[tool.pycmdcheck]` table of the repository is then not read at
+all. Its `fail_on` has no effect, and no warning about the table is printed.
+[A workflow with a settings file](#workflow-settings-file) below shows one
+in use.
+
+## How to Start pycmdcheck
+
+Use the `pycmdcheck` command and pass the repository as `PATH`, as shown
+above. `python -P -m pycmdcheck` is equally safe. The `-P` option keeps the
+current directory off Python's module search path.
+
+Do not change into the repository and run `python -m pycmdcheck` there. Python
+then puts the current directory first on its module search path. pycmdcheck
+removes that entry when it starts, which stops a repository from supplying
+its own checks. The removal comes too late for the modules Python has loaded
+by then, so a file in the repository named like one of those modules would be
+loaded in its place.
+
+## Limits {#limits}
+
+pycmdcheck reads regular files only, and each read stops at a size cap. A text
+file such as the README or the license is read up to 1 mebibyte (MiB), which
+is 1,048,576 bytes. A `pyproject.toml` larger than 1 MiB is treated as
+unreadable. A Python file larger than 2 MiB is skipped and named in the
+report. So is a Python file the parser cannot read, for example one whose
+expressions are nested too deeply.
+
+Two things are not bounded, and that is why the run needs limits from outside.
+
+- **Time.** A file built to be slow for the Python parser is not detected.
+  Give the run a time limit, as `timeout` does above. When the limit is
+  reached, `timeout` exits with code 124 and `report.json` is empty.
+- **Memory.** Parsing needs far more memory than the file is large. By the
+  measurement recorded in pycmdcheck's source, a Python file at the 2 MiB cap
+  can need about 1.3 GB while it is parsed, and up to four checks run at the
+  same time. Give the run a memory limit, and add `--no-parallel` to keep the
+  peak lower.
+
+How you set a memory limit depends on the system. A container or a virtual
+machine with a memory cap works everywhere. On Linux, `ulimit -v` with a size
+in kibibytes, given in the same shell before the command, caps what the run
+may reserve. macOS rejects that command.
+
+Treat a missing or empty report as "not checked". It is never a clean result.
+
+## Reading the Report
+
+The report is one JSON object. The
+[command-line reference](cli.qmd#json-output) describes every key. This is the
+report for a small package whose `pyproject.toml` has a table header that is
+never closed. The path is shortened, and 10 of the 12 results are left out.
+
+```json
+{
+  "package_path": ".../broken",
+  "passed": false,
+  "summary": {
+    "ok": 5,
+    "note": 4,
+    "warning": 0,
+    "error": 1,
+    "skipped": 2
+  },
+  "results": [
+    {
+      "name": "metadata",
+      "status": "error",
+      "message": "Invalid pyproject.toml",
+      "details": [
+        "TOML parse error: Expected ']' at the end of a table declaration (at line 18, column 14)"
+      ],
+      "duration": 5.364418029785156e-05,
+      "findings": [
+        {
+          "code": "metadata.unreadable-pyproject",
+          "status": "error",
+          "message": "TOML parse error: Expected ']' at the end of a table declaration (at line 18, column 14)",
+          "hint": "Correct pyproject.toml so that it is valid TOML, saved as UTF-8 with no byte order mark."
+        }
+      ],
+      "skip_reason": null
+    },
+    {
+      "name": "python_versions",
+      "status": "skipped",
+      "message": "pyproject.toml could not be read",
+      "details": [
+        "The metadata check reports the reason"
+      ],
+      "duration": 0.0002830028533935547,
+      "findings": [],
+      "skip_reason": "prerequisite-failed"
+    }
+  ],
+  "schema_version": 1,
+  "pycmdcheck_version": "0.2.0",
+  "profile": "triage",
+  "config_file": null,
+  "fail_on": [
+    "error"
+  ],
+  "failed": true,
+  "requested_checks": null,
+  "skipped_checks": []
+}
+```
+
+The eight keys after `results` describe the run. `schema_version` is `1` for
+this layout, so a program can test it before it reads anything else.
+`profile` names the profile that was given, and `requested_checks` is `null`
+when the run used that profile's own set of checks. A program that needs to
+know the run stayed inside `triage` tests both, because `--check` on the
+command line, or `-c` for short, can name a check outside the profile.
+`config_file` is `null` because the run was given no `--config` file. With
+one it holds the path of the file as it was written on the command line.
+`failed` says whether the run would have exited with code 1 without
+`--exit-zero`. It is `true` here because of the one error.
+
+### What a Program Should Read
+
+Each result is read in three steps.
+
+1. Read `status`. It is one of the five values in the table below.
+2. For a `skipped` result, read `skip_reason`. It says why the check did not
+   look at anything, and it is one of nine fixed values.
+3. For a `note`, a `warning` or an `error`, read the `code` of each entry of
+   `findings`. A code names the rule the finding comes from, and a result can
+   carry several findings.
+
+The codes and the skip reasons are stable names, and
+[Rule Codes](rules.qmd) lists them all. The `message` and the `details` are
+written for people, and so is the `hint` of a finding, which is one sentence
+on what to do about it. Show them to the reviewer, and do not compare their
+text, because the wording can change. `findings` and `skip_reason` are new in
+version 0.2.0.
+
+These lines of Python print the skipped checks with their reasons and group
+the findings by code.
+
+```python
+import json
+
+with open("report.json", encoding="utf-8") as handle:
+    report = json.load(handle)
+
+print(report["summary"])
+by_code = {}
+for result in report["results"]:
+    if result["status"] == "skipped":
+        print("skipped:", result["name"], "because", result["skip_reason"])
+    for finding in result["findings"]:
+        by_code.setdefault(finding["code"], []).append(finding)
+
+for code, findings in sorted(by_code.items()):
+    print(f"{findings[0]['status']}: {code} ({len(findings)})")
+```
+
+```
+{'ok': 5, 'note': 4, 'warning': 0, 'error': 1, 'skipped': 2}
+skipped: python_versions because prerequisite-failed
+skipped: version because prerequisite-failed
+note: ci.missing (1)
+note: citation.missing (1)
+note: community.missing-code-of-conduct (1)
+note: community.missing-contributing (1)
+error: metadata.unreadable-pyproject (1)
+note: py_typed.missing (1)
+```
+
+The reason `prerequisite-failed` says that another check reports the cause.
+Here that check is `metadata`, with the code `metadata.unreadable-pyproject`.
+A program can therefore count the broken `pyproject.toml` once and not three
+times.
+
+### The Five Statuses
+
+| Status | What it means for a reviewer |
+|--------|------------------------------|
+| `ok` | The check found what it looked for |
+| `note` | Something the author can improve, such as adding a citation file. Worth a mention, and not a defect in itself. |
+| `warning` | A likely problem, such as a missing license file, a missing README or a repository with no tests. Look at it. |
+| `error` | The check failed. Under this profile that means the metadata is missing, cannot be read, or lacks a name or version, no importable package was found, or the version in the code differs from the one in the metadata. |
+| `skipped` | The check did not look at anything, and `skip_reason` says why. This is not a pass. |
+
+A check that has nothing to look at is always skipped. It never returns a
+note or ok for that. Under this profile the reason is `not-applicable` when
+the project has nothing of the kind, as a single module has no package
+directory for `py_typed`. It is `prerequisite-failed` when another check
+reports what is missing. A third reason, `parse-failed`, says that `py_typed`
+or `version` could not parse the code, for example because the repository
+uses syntax newer than the Python that runs pycmdcheck.
+
+An error whose finding has a code that starts with `pycmdcheck` and a dot is a
+fault in pycmdcheck and not a finding about the repository. The `name` of
+that result is still the name of the check that failed.
+
+[Configuration](configuration.qmd#statuses-each-check-can-return) lists the
+statuses each check can return.
+
+### Exit Codes
+
+With `--exit-zero` the exit code describes the run and not the repository.
+
+| Code | Meaning | Standard output |
+|------|---------|-----------------|
+| 0 | pycmdcheck ran | The JSON report |
+| 2 | Usage error, for example a path that does not exist or a mistake in a `--config` file | Empty |
+| 3 | pycmdcheck itself failed | Empty |
+
+Without `--exit-zero`, any error in the report would give exit code 1. When
+you pass neither `--fail-on` nor `--config`, so would any other status the
+repository names in its own `fail_on` setting. A caller would then have to
+tell code 1 apart from codes 2 and 3 to know whether there is a report. With
+the option, a non-zero code always means there is no report to read.
+
+## A pyproject.toml That Does Not Parse
+
+A broken `pyproject.toml` does not stop the run. The report above shows what
+happens.
+
+- `metadata` returns the one `error`, with the code
+  `metadata.unreadable-pyproject` and the parser's message in `details`.
+- `python_versions` and `version`, which need the file, are `skipped` with the
+  reason `prerequisite-failed` and point at `metadata`.
+- The other nine checks run as usual.
+- A warning goes to standard error, standard output is still valid JSON, and
+  with `--exit-zero` the exit code is 0.
+
+A file that is not valid UTF-8, and a `pyproject.toml` that is a directory,
+give the same three results. A repository with no `pyproject.toml`,
+`setup.py` or `setup.cfg` gives the same pattern, with the code
+`metadata.missing` on the error.
+
+A `[tool.pycmdcheck]` table with a malformed `fail_on` or a malformed check
+entry also gives an ordinary report, with one warning on standard error for
+each kind of mistake. An option of the wrong type inside a check's table
+gives no warning. [Configuration](configuration.qmd#basic-configuration) says
+what happens to it.
+
+Each of these warnings is one line. A line about the words in a `fail_on`
+list, or about the entries under `checks`, names the ones that have the
+mistake. It names at most 25 of them and then gives a count, so a table full
+of mistakes adds a few lines to the log of your job and not hundreds. A
+`fail_on` that is not a list gives a line that names the key and the type it
+found, and so does a `checks` value that is not a table. Text that a warning
+quotes from the table is cleaned first. A line break or another control
+character in it is shown as an escape such as `\n`, so the repository cannot
+write lines of its own to standard error. A value that is too large to
+print, such as a number with thousands of digits, is named as
+`a value too large to show` and does not end the run.
+
+With `--config` none of these warnings is printed, the one for a
+`pyproject.toml` that does not parse included, because the table is not
+read. The `metadata` check still reports the broken file in its result.
+
+## Posting a Comment {#posting-a-comment}
+
+A program that answers on a pull request or an issue can ask for the report
+as Markdown and post the file as it is.
+
+```bash
+timeout 120 pycmdcheck --profile triage --fail-on error --format markdown --exit-zero --output report.md path/to/repo
+```
+
+`--fail-on error` keeps the closing line of the report yours. Without it the
+repository's own `fail_on` setting decides whether that line says the run
+failed. `--output` writes the report to `report.md` and prints nothing on
+standard output. The report has a table with one row for each check, and a
+collapsed block for each result that is not ok and has detail lines or
+hints. The block lists each hint after the detail lines, as an item that
+starts with `**Suggestion:**`, so the comment gives the author of the
+package a suggestion for each finding. A suggestion here and the `hint` of a
+finding in the JSON report are the same sentence. The
+[command-line reference](cli.qmd#markdown-output) shows such a report.
+
+The file is written once, when the run is over. When the run fails or is
+stopped, nothing is written, and a `report.md` from an earlier run stays as it
+was. Remove the old file before the run, and post the new one only when the
+exit code is 0.
+
+Text from the repository is meant to be shown as text and not read as
+Markdown. A message, a detail line or a hint may quote a file name, a version
+or a metadata value that the repository chose. The report puts each such text
+on one line and puts a backslash before the characters that Markdown reads as
+markup, so the text cannot break the table, write a Markdown link or start a
+heading. It also places a zero-width space, which is an invisible character,
+after every `@` and inside anything shaped like `:word:`. The comment then
+notifies no user or team and shows no emoji.
+
+A repository whose `requires-python` is `@octocat :tada: | >=3.11` gets this
+block for its `metadata` result. The first item is a detail line that quotes
+the value, and the second is the suggestion. Here `<U+200B>` stands for the
+zero-width space, which the file holds as a character you cannot see.
+
+```
+<details>
+<summary>metadata: note</summary>
+
+- requires-python is not a valid version specifier: '@<U+200B>octocat :<U+200B>tada: \| \>=3.11'
+- **Suggestion:** Set requires-python in the \[project\] table of pyproject.toml to a value such as "\>=3.12".
+
+</details>
+```
+
+A web address gets the same invisible character after `https:` or `www`, so
+GitHub shows it as text and the comment holds no link that the repository
+chose. GitHub may still link a few kinds of plain text, such as an issue
+reference written as `GH-1`.
+
+The Markdown report is for people to read. A program that has to decide
+something should run the JSON command as well and read that report.
+
+### In a GitHub Actions Workflow {#github-actions}
+
+Two steps are enough for a bot that comments on an issue. They come after
+the steps that fetch the submitted repository into `submitted-package` and
+install [uv](https://docs.astral.sh/uv/).
+
+```yaml
+- name: Run pycmdcheck
+  run: |
+    timeout 120 uvx pycmdcheck@0.2.0 --profile triage --fail-on error \
+      --format markdown --exit-zero --output report.md submitted-package
+
+- name: Post the report
+  env:
+    GH_TOKEN: ${{ github.token }}
+    ISSUE: ${{ github.event.issue.number }}
+  run: |
+    gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" \
+      --body-file report.md --edit-last --create-if-none
+```
+
+The profile chooses the checks and the Markdown report is the comment, so the
+workflow holds no list of checks and no code that reads the results. A later
+release can add a check to the profile and the bot picks it up when the
+version in the first step is raised. Name a version there, so that the
+comments change only when you decide to update.
+
+The second step runs only when the first one succeeds, which is when the
+report was written. `--edit-last` replaces the bot's earlier comment on the
+issue and `--create-if-none` writes a first one, so the issue holds one
+report however often the workflow runs. The job needs the permission
+`issues: write`, and a recent GitHub command line tool for
+`--create-if-none`.
+
+A bot that does not want every check of the profile adds `--skip` to the
+first step. Several names go in one value, separated by commas.
+
+```yaml
+- name: Run pycmdcheck
+  run: |
+    timeout 120 uvx pycmdcheck@0.2.0 --profile triage --fail-on error \
+      --skip citation,community \
+      --format markdown --exit-zero --output report.md submitted-package
+```
+
+Write no space after a comma. The shell ends the value at a space, so
+pycmdcheck would stop with exit code 2 and write no report, and nothing
+would be posted. `--skip` can also be given once for each name.
+
+#### With a Settings File {#workflow-settings-file}
+
+The step that runs pycmdcheck holds the bot's whole selection in one
+command, and for most bots that is enough. A settings file is worth having
+when that command grows, or when the bot has to set an option of a check,
+which cannot be done on the command line. The file is kept in the bot's own
+repository, so a change to what the bot checks is a change to one small file
+that can be reviewed. It is written in TOML (Tom's Obvious Minimal
+Language), the format of `pyproject.toml`.
+
+```toml
+# .github/pycmdcheck-triage.toml, in the bot's own repository
+profile = "triage"
+fail_on = "warning"
+
+[checks]
+citation = false
+```
+
+Only the first step changes. `--config` takes the place of `--profile` and
+`--fail-on`, because the file now holds both. The second step stays as it
+is.
+
+```yaml
+- name: Run pycmdcheck
+  run: |
+    timeout 120 uvx pycmdcheck@0.2.0 --config .github/pycmdcheck-triage.toml \
+      --format markdown --exit-zero --output report.md submitted-package
+```
+
+The job has to check out the bot's own repository before this step, so that
+the file is in the working directory. When the file is not there, pycmdcheck
+exits with code 2 and writes no report. This is the last line it writes to
+standard error.
+
+```
+Error: Invalid value for '--config': File '.github/pycmdcheck-triage.toml' does not exist.
+```
+
+With this file the comment changes in three places. The report has no
+`citation` row, and its closing line says that the run failed when a check
+returns a warning or an error. The line under the heading names the file
+beside the profile. The `[tool.pycmdcheck]` table of the submitted
+repository is not read, so no setting of that repository reaches the
+comment.
+
+A mistake in the file ends the first step with exit code 2. No report is
+written, the second step does not run, and nothing is posted. To test a
+changed file before it is merged, run
+`pycmdcheck --config .github/pycmdcheck-triage.toml --list` in the bot's
+repository. That reads the file, runs no check and needs no submitted
+package. [Configuration](configuration.qmd#config-file) is the reference for
+the file.

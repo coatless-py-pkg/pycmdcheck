@@ -29,9 +29,10 @@ Example usage:
 
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _get_version
+from pathlib import Path
 from typing import Any
 
-from pycmdcheck.results import CheckResult, CheckStatus, Report
+from pycmdcheck.results import CheckResult, CheckStatus, Finding, Report
 from pycmdcheck.runner import run_checks
 
 try:
@@ -44,19 +45,21 @@ __all__ = [
     "run_checks",
     "CheckResult",
     "CheckStatus",
+    "Finding",
     "Report",
     "__version__",
 ]
 
 
 def check(
-    path: str = ".",
+    path: str | Path = ".",
     *,
     checks: list[str] | None = None,
     skip: list[str] | None = None,
     config: dict[str, Any] | None = None,
     parallel: bool = True,
     fail_fast: bool = False,
+    profile: str | None = None,
 ) -> Report:
     """Check a Python package for quality issues.
 
@@ -69,15 +72,28 @@ def check(
         checks: Names of checks to run. If None, runs all enabled checks from
             configuration. The available check names are discovered dynamically
             via entry points; run ``pycmdcheck --list`` to see the current set.
+            An unknown name is an error. A deprecated check (``imports``) only
+            runs when it is named here.
         skip: List of check names to skip, even if enabled in configuration.
+            An unknown name is ignored with a logged warning.
         config: Pre-loaded configuration dictionary. If None, configuration
             is loaded from the package's pyproject.toml.
         parallel: Whether to run checks in parallel. Defaults to True.
         fail_fast: Whether to stop after the first ERROR. Defaults to False.
+        profile: Name of a profile (see ``pycmdcheck --list-profiles``), with
+            the same meaning as the ``--profile`` option. Its options win over
+            the configuration, and its check set is used when ``checks`` is
+            not given.
 
     Returns:
         A Report object containing all check results. Use report.passed to
         check if all checks passed, or iterate report.results for details.
+
+    Raises:
+        FileNotFoundError: If ``path`` does not exist.
+        NotADirectoryError: If ``path`` is not a directory.
+        ValueError: If ``profile`` is not a known profile name, or if
+            ``checks`` holds a name that no registered check has.
 
     Examples:
         Basic usage - check current directory:
@@ -98,6 +114,7 @@ def check(
         config=config,
         parallel=parallel,
         fail_fast=fail_fast,
+        profile=profile,
     )
 
     return report

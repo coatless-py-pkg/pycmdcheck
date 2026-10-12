@@ -1,43 +1,90 @@
 """Package structure validation check.
 
 This module provides the StructureCheck class which validates that a
-Python package follows standard directory layouts (src layout or flat layout).
+Python project holds an importable package or module. Discovery is done by
+:class:`~pycmdcheck.package_layout.PackageLayout`, so this check sees the
+same layout as every other check.
 """
 
 from pathlib import Path
 from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
-from pycmdcheck.package_layout import NON_PACKAGE_DIRS
-from pycmdcheck.pyproject_reader import read_pyproject
-from pycmdcheck.results import CheckResult, CheckStatus
+from pycmdcheck.constants import MAX_DETAIL_LINES
+from pycmdcheck.fileio import (
+    display_path,
+    find_declared_files,
+    is_regular_file,
+    plain_text,
+)
+from pycmdcheck.package_layout import NON_PACKAGE_DIRS, PackageLayout
+from pycmdcheck.results import CheckResult, CheckStatus, Finding, most_severe
 
-# Build backends that produce native-extension packages which may have no
-# Python source under src/ (or have it under a different directory).
-NATIVE_BUILD_BACKENDS = (
-    "maturin",
-    "scikit_build",
-    "setuptools_rust",
-    "mesonpy",
-    "meson_python",
+# How each kind of PackageLayout candidate is named in details and messages.
+KIND_LABELS = {
+    "package": "package",
+    "namespace": "namespace package",
+    "stub-only": "stub-only package",
+    "module": "single-file module",
+}
+SEARCHED = (
+    "Looked in the project root, src/, lib/, python/ and any source directory"
+    " the build configuration names"
+)
+
+# The hint for a project that holds no code of its own yet.
+_CREATE_PACKAGE = (
+    "Create src/<name>/__init__.py, where <name> is the name used to import the "
+    "package."
 )
 
 
+def _listed(names: list[str]) -> str:
+    """Join *names*, saying how many were left out past MAX_DETAIL_LINES."""
+    shown = ", ".join(plain_text(name) for name in names[:MAX_DETAIL_LINES])
+    extra = len(names) - MAX_DETAIL_LINES
+    return f"{shown} (+{extra} more)" if extra > 0 else shown
+
+
+def _stray_python(package_path: Path) -> list[str]:
+    """Return root scripts and directories holding a package that no layout claims.
+
+    Version 0.1.1 reported these as a valid structure (``noxfile.py`` alone,
+    ``packages/core/src/core``, a virtualenv in ``env/``), so they keep the
+    result below ERROR. The names it skipped are skipped here too.
+    """
+    stray: set[str] = set()
+    patterns = ["*.py", "*/**/__init__.py"]
+    for found in find_declared_files(package_path, patterns, limit=200):
+        parts = found.relative_to(package_path).parts
+        top = parts[0]
+        if len(parts) == 1:
+            skip = top in ("setup.py", "conftest.py")
+        else:
+            skip = top.startswith("_") or top in NON_PACKAGE_DIRS
+        if not skip:
+            stray.add(top)
+    return sorted(stray)
+
+
 class StructureCheck(BaseCheck):
-    """Check that package has a valid directory structure.
+    """Check that the project has an importable package or module.
 
-    Validates that the package follows one of the standard Python
-    package layouts:
+    Accepted layouts:
 
-    - **src layout**: Package code in ``src/<package_name>/``
-    - **flat layout**: Package code directly in project root
+    - **src layout**: code in ``src/<package_name>/``
+    - **flat layout**: code directly in the project root
+    - a source directory named by the build backend, ``lib/`` or ``python/``
+    - a single-file module, a PEP 420 namespace package or a stub-only package
 
-    The check verifies that package directories contain ``__init__.py``
-    files and are properly structured.
+    Directories of Rust, C or front-end sources under ``src/`` are ignored. A
+    native-extension project with no Python package is skipped.
 
     Attributes:
         name: The check identifier ("structure").
         description: Human-readable description of this check.
+        rules: Every code the check can emit, with what the rule means.
+        hints: The same codes, each with what to do about the finding.
 
     Examples:
         Run the structure check:
@@ -47,23 +94,40 @@ class StructureCheck(BaseCheck):
         >>> result = check.run(Path("."), {"enabled": True})
         >>> result.name
         'structure'
-
-        Check a package with src layout:
-
-        >>> # For a package with src/mypackage/__init__.py
-        >>> # result.status == CheckStatus.OK
-        >>> # result.details contains "Using src layout"
     """
 
     name = "structure"
     description = "Validate package directory structure"
+    rules = {
+        "structure.missing-package": "No importable package or module was found",
+        "structure.missing-init": "The package directory has no __init__.py",
+        "structure.non-python-sources": (
+            "src/ holds no Python package and nothing says the build is native"
+        ),
+        "structure.unrecognized-layout": (
+            "Python files exist only outside the layouts the check knows"
+        ),
+    }
+    hints = {
+        "structure.missing-package": (
+            "Add an __init__.py file to the directory that holds your code, or "
+            "create src/<name>/__init__.py if there is no code yet."
+        ),
+        "structure.missing-init": (
+            "Add an empty __init__.py file to the package directory."
+        ),
+        "structure.non-python-sources": (
+            "Add a package directory with an __init__.py file to src/, or list the "
+            "build tool, such as maturin or Cython, in requires under [build-system]."
+        ),
+        "structure.unrecognized-layout": (
+            "Move the package to src/<name>/, or name the directory that holds it "
+            "in the build settings, such as where in [tool.setuptools.packages.find]."
+        ),
+    }
 
     def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
         """Check package directory structure.
-
-        Determines the layout type (src or flat) and validates that
-        the package directories are properly formed with ``__init__.py``
-        files.
 
         Args:
             package_path: Path to the package directory to check.
@@ -73,213 +137,134 @@ class StructureCheck(BaseCheck):
         Returns:
             A CheckResult with:
 
-            - OK status if a valid src, flat, single-module, or PEP 420
-              namespace layout is found
-            - NOTE status if src/ has no Python package but a native-extension
-              build backend (maturin/scikit-build/setuptools-rust) is declared
-            - WARNING status if packages missing ``__init__.py``
-            - ERROR status if no package or module found
+            - OK status if a package, module, namespace package or stub-only
+              package is found
+            - NOTE status if nothing is found and ``src/`` holds sources that
+              no native build explains, or Python files exist only outside a
+              recognized layout
+            - WARNING status if the package directory has no ``__init__.py``
+            - ERROR status if no package or module is found
+            - SKIPPED status ("not-applicable") if nothing is found in a
+              native-extension project
         """
-        details: list[str] = []
+        layout = PackageLayout(package_path)
+        primary = layout.primary_candidate
+        if primary is None:
+            return self._nothing_found(package_path, layout)
 
-        # Check for src layout
-        src_path = package_path / "src"
-        if src_path.is_dir():
-            return self._check_src_layout(package_path, src_path, details)
+        base = primary.root.path
+        if base == package_path / "src":
+            where, message = "src layout", "Valid src layout structure"
+        elif base == package_path:
+            where, message = "flat layout", "Valid flat layout structure"
+        else:
+            where = f"source directory {display_path(base, package_path)}/"
+            message = "Valid package structure"
+        if primary.kind != "package":
+            message = f"Valid {KIND_LABELS[primary.kind]} structure"
+        details = [f"Using {where}"]
 
-        # Check for flat layout
-        return self._check_flat_layout(package_path, details)
-
-    def _check_src_layout(
-        self,
-        package_path: Path,
-        src_path: Path,
-        details: list[str],
-    ) -> CheckResult:
-        """Validate src layout structure."""
-        details.append("Using src layout")
-
-        # Find candidate package directories in src/
-        package_dirs = [
-            d
-            for d in src_path.iterdir()
-            if d.is_dir() and not d.name.startswith((".", "_"))
-        ]
-
-        if not package_dirs:
-            return self._handle_no_src_package(package_path, src_path, details)
-
-        # Classify each candidate: regular package, PEP 420 namespace package,
-        # or a directory genuinely missing __init__.py.
-        missing_init: list[str] = []
-        for pkg_dir in package_dirs:
-            if (pkg_dir / "__init__.py").exists():
-                details.append(f"Found package: {pkg_dir.name}")
-            elif self._is_namespace_package(pkg_dir):
-                details.append(f"Found namespace package: {pkg_dir.name}")
-            else:
-                missing_init.append(pkg_dir.name)
-
-        if missing_init:
-            details.append(f"Missing __init__.py in: {', '.join(missing_init)}")
-            return CheckResult(
-                name=self.name,
-                status=CheckStatus.WARNING,
-                message="Some packages missing __init__.py",
-                details=details,
+        # Helpers (benchmarks/, loose scripts beside a package) are not listed.
+        shown = [c for c in layout.packages if c.rank >= 2] or layout.packages
+        # A directory of modules with no __init__.py anywhere in it.
+        bare = [c for c in shown if c.kind == "namespace" and not c.contains_package]
+        for kind, label in KIND_LABELS.items():
+            names = [c.path.name for c in shown if c.kind == kind and c not in bare]
+            if names:
+                plural = "s" if len(names) > 1 else ""
+                details.append(f"Found {label}{plural}: {_listed(names)}")
+        ignored = [d.name for d in layout.non_python_src_dirs]
+        if ignored:
+            details.append(
+                f"Ignored non-Python directories in src/: {_listed(ignored)}"
             )
 
+        if primary in bare:
+            missing = f"Missing __init__.py in: {_listed([c.name for c in bare])}"
+            details.append(missing)
+            return self._report(
+                "structure.missing-init",
+                CheckStatus.WARNING,
+                "Some packages missing __init__.py",
+                details,
+                found=missing,
+            )
         return CheckResult(
             name=self.name,
             status=CheckStatus.OK,
-            message="Valid src layout structure",
+            message=message,
             details=details,
         )
 
-    def _handle_no_src_package(
+    def _report(
         self,
-        package_path: Path,
-        src_path: Path,
+        code: str,
+        status: CheckStatus,
+        message: str,
         details: list[str],
+        *,
+        found: str = "",
+        hint: str | None = None,
     ) -> CheckResult:
-        """Handle a ``src/`` directory with no candidate package subdirectory.
+        """Build the result for the one rule that fired.
 
-        Covers single-module src layouts (``src/foo.py``) and native-extension
-        packages (maturin/scikit-build/setuptools-rust) whose ``src/`` holds no
-        Python at all — neither should be a hard ERROR.
+        The finding says *found*, or *message* when that already names it. A
+        *hint* given here is used in place of the one in ``hints``.
         """
-        # Single-module src layout: src/foo.py
-        modules = [f for f in sorted(src_path.glob("*.py")) if f.name != "__init__.py"]
-        if modules:
-            details.append(
-                f"Found single-file modules: {', '.join(m.name for m in modules)}"
-            )
-            return CheckResult(
-                name=self.name,
-                status=CheckStatus.OK,
-                message="Valid single-file module structure",
-                details=details,
-            )
-
-        # Native-extension package (maturin/scikit-build/setuptools-rust): the
-        # Python lives elsewhere (or there is none), so a missing Python package
-        # under src/ is expected, not an error.
-        if self._is_native_backend(package_path):
-            details.append(
-                "No Python package under src/ (native-extension build backend detected)"
-            )
-            return CheckResult(
-                name=self.name,
-                status=CheckStatus.NOTE,
-                message="No Python package in src/ (native-extension layout)",
-                details=details,
-            )
-
+        findings = [Finding(code, found or message, status, hint)]
         return CheckResult(
             name=self.name,
-            status=CheckStatus.ERROR,
-            message="No package directory found in src/",
+            status=most_severe(findings),
+            message=message,
             details=details,
+            findings=findings,
         )
 
-    def _check_flat_layout(
-        self,
-        package_path: Path,
-        details: list[str],
-    ) -> CheckResult:
-        """Validate flat layout structure."""
-        details.append("Using flat layout")
-
-        # Look for package directories (not src/)
-        package_dirs = [
-            d
-            for d in package_path.iterdir()
-            if d.is_dir()
-            and not d.name.startswith((".", "_"))
-            and d.name not in NON_PACKAGE_DIRS
-            and (d / "__init__.py").exists()
-        ]
-
-        if not package_dirs:
-            # Check if there are any .py files at root (single-file module)
-            py_files = list(package_path.glob("*.py"))
-            py_files = [
-                f for f in py_files if f.name not in ("setup.py", "conftest.py")
-            ]
-
-            if py_files:
-                details.append(
-                    f"Found single-file modules: {', '.join(f.name for f in py_files)}"
-                )
-                return CheckResult(
-                    name=self.name,
-                    status=CheckStatus.OK,
-                    message="Valid single-file module structure",
-                    details=details,
-                )
-
-            # PEP 420 namespace package: a top-level dir without __init__.py
-            # that nonetheless contains a nested package/module.
-            namespace_dirs = [
-                d
-                for d in package_path.iterdir()
-                if d.is_dir()
-                and not d.name.startswith((".", "_"))
-                and d.name not in NON_PACKAGE_DIRS
-                and self._is_namespace_package(d)
-            ]
-            if namespace_dirs:
-                details.append(
-                    "Found namespace package(s): "
-                    + ", ".join(d.name for d in namespace_dirs)
-                )
-                return CheckResult(
-                    name=self.name,
-                    status=CheckStatus.OK,
-                    message="Valid namespace package structure",
-                    details=details,
-                )
-
-            return CheckResult(
-                name=self.name,
-                status=CheckStatus.ERROR,
-                message="No package or module found",
-                details=details + ["Consider using src/ layout or adding __init__.py"],
+    def _nothing_found(self, package_path: Path, layout: PackageLayout) -> CheckResult:
+        """Grade a project in which no importable package or module was found."""
+        evidence = layout.native_build_evidence
+        if evidence:
+            # The build makes the module, so no Python package is expected.
+            in_src = " in src/" if layout.has_src_dir else ""
+            return CheckResult.skip(
+                self.name,
+                f"No Python package{in_src} (native-extension layout)",
+                "not-applicable",
+                [*evidence, SEARCHED],
             )
-
-        for pkg_dir in package_dirs:
-            details.append(f"Found package: {pkg_dir.name}")
-
-        return CheckResult(
-            name=self.name,
-            status=CheckStatus.OK,
-            message="Valid flat layout structure",
-            details=details,
+        if layout.src_has_non_python_sources:
+            # Without a sign of a native build, src/ may hold data or Java.
+            return self._report(
+                "structure.non-python-sources",
+                CheckStatus.NOTE,
+                "No Python package in src/ (non-Python sources only)",
+                [SEARCHED],
+            )
+        stray = _stray_python(package_path)
+        if stray:
+            outside = f"Python files outside a recognized layout: {_listed(stray)}"
+            # A script or a virtual environment is no package that could be
+            # moved, so such a project is told to create one.
+            movable = any(
+                (package_path / name).is_dir()
+                and not is_regular_file(package_path / name / "pyvenv.cfg")
+                for name in stray
+            )
+            return self._report(
+                "structure.unrecognized-layout",
+                CheckStatus.NOTE,
+                "No package found in a recognized layout",
+                [outside, SEARCHED],
+                found=outside,
+                hint=None if movable else _CREATE_PACKAGE,
+            )
+        return self._report(
+            "structure.missing-package",
+            CheckStatus.ERROR,
+            (
+                "No package directory found in src/"
+                if layout.has_src_dir
+                else "No package or module found"
+            ),
+            [SEARCHED],
         )
-
-    @staticmethod
-    def _is_namespace_package(directory: Path) -> bool:
-        """Return whether *directory* is a PEP 420 implicit namespace package.
-
-        A namespace package has no ``__init__.py`` of its own but contains a
-        nested subpackage (a directory with ``__init__.py``) somewhere beneath
-        it. This distinguishes it from a regular package that simply forgot its
-        ``__init__.py``.
-        """
-        if (directory / "__init__.py").exists():
-            return False
-        for nested in directory.rglob("__init__.py"):
-            if nested.parent != directory:
-                return True
-        return False
-
-    @staticmethod
-    def _is_native_backend(package_path: Path) -> bool:
-        """Return whether pyproject.toml declares a native-extension backend."""
-        data = read_pyproject(package_path)
-        if not data:
-            return False
-        backend = data.get("build-system", {}).get("build-backend", "")
-        if not isinstance(backend, str):
-            return False
-        return any(native in backend for native in NATIVE_BUILD_BACKENDS)

@@ -1,5 +1,6 @@
 """Result types for pycmdcheck."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -13,10 +14,11 @@ class CheckStatus(Enum):
 
     Attributes:
         OK: Check passed successfully.
-        NOTE: Informational message, not a problem.
+        NOTE: Something the author of the checked package can improve.
         WARNING: Potential issue that should be reviewed.
         ERROR: Check failed.
-        SKIPPED: Check was skipped (e.g., required tool not installed).
+        SKIPPED: The check did not look at anything, for example because the
+            tool it needs is not installed. The result's skip_reason says why.
 
     Examples:
         >>> status = CheckStatus.OK
@@ -89,12 +91,120 @@ class CheckStatus(Enum):
         return colors[self]
 
 
+# Why a check was skipped. A SKIPPED result carries one of these as its
+# skip_reason. The set is closed, so a program that reads the JSON report can
+# rely on it.
+SKIP_REASONS: frozenset[str] = frozenset(
+    {
+        # The tool the check needs is not installed.
+        "tool-missing",
+        # The project has not adopted the tool (linting, typing, formatting).
+        "not-configured",
+        # There is nothing for this check to look at in this project.
+        "not-applicable",
+        # The check cannot work because something another check reports is
+        # missing or unreadable, such as pyproject.toml.
+        "prerequisite-failed",
+        # The check needs the network and could reach no host at all.
+        "network-unavailable",
+        # The check could not import the code it needed to look at.
+        "import-failed",
+        # The check could not parse the code it needed to look at.
+        "parse-failed",
+        # The runner stopped before this check.
+        "fail-fast",
+        # The check has been merged into another.
+        "deprecated",
+    }
+)
+
+# The statuses a finding can carry, from most to least severe.
+_SEVERITY: tuple[CheckStatus, ...] = (
+    CheckStatus.ERROR,
+    CheckStatus.WARNING,
+    CheckStatus.NOTE,
+)
+
+
+@dataclass(frozen=True)
+class Finding:
+    """One thing a check found, for programs that read the report.
+
+    Attributes:
+        code: Stable identifier of the rule, "<check name>.<rule>" in lower
+            case with hyphens inside the rule part, such as "changelog.missing".
+        message: One line of plain text that says what was found.
+        status: How severe the finding is: NOTE, WARNING or ERROR.
+        hint: One sentence that says what to do about the finding. A check
+            sets it when the advice depends on what was found. When it is
+            None, the runner fills it from the `hints` of the check.
+
+    Examples:
+        >>> finding = Finding("changelog.missing", "No changelog found")
+        >>> finding.status
+        <CheckStatus.NOTE: 'note'>
+        >>> finding.to_dict()  # doctest: +NORMALIZE_WHITESPACE
+        {'code': 'changelog.missing', 'status': 'note',
+         'message': 'No changelog found', 'hint': None}
+    """
+
+    code: str
+    message: str
+    status: CheckStatus = CheckStatus.NOTE
+    hint: str | None = None
+
+    def to_dict(self) -> dict[str, str | None]:
+        """Convert to dictionary for JSON serialization.
+
+        Returns:
+            A dictionary with keys: code, status, message, hint.
+        """
+        return {
+            "code": self.code,
+            "status": self.status.value,
+            "message": self.message,
+            "hint": self.hint,
+        }
+
+
+def most_severe(findings: Iterable[Finding]) -> CheckStatus:
+    """Return the most severe status among findings.
+
+    An error outranks a warning, which outranks a note. This is the status
+    of a result that carries these findings.
+
+    Args:
+        findings: The findings of one check.
+
+    Returns:
+        ERROR, WARNING or NOTE, or OK when there are no findings.
+
+    Examples:
+        >>> most_severe(
+        ...     [
+        ...         Finding("changelog.missing", "No changelog found"),
+        ...         Finding(
+        ...             "metadata.missing-required",
+        ...             "Missing required fields: version",
+        ...             CheckStatus.ERROR,
+        ...         ),
+        ...     ]
+        ... )
+        <CheckStatus.ERROR: 'error'>
+        >>> most_severe([])
+        <CheckStatus.OK: 'ok'>
+    """
+    found = {finding.status for finding in findings}
+    return next((status for status in _SEVERITY if status in found), CheckStatus.OK)
+
+
 @dataclass
 class CheckResult:
     """Result of a single check.
 
     Contains the outcome of running a check, including the status,
-    a human-readable message, and optional details.
+    a human-readable message, and optional details. People read the message
+    and the details. Programs read the findings and the skip reason.
 
     Attributes:
         name: Name of the check that produced this result (e.g., "metadata").
@@ -102,6 +212,10 @@ class CheckResult:
         message: Human-readable message describing the result.
         details: Optional list of detailed messages providing more context.
         duration: Time taken to run the check in seconds.
+        findings: What the check found, one Finding for each. Empty when the
+            status is OK or SKIPPED.
+        skip_reason: One of SKIP_REASONS when the status is SKIPPED, and None
+            otherwise.
 
     Examples:
         Create a successful check result:
@@ -131,6 +245,44 @@ class CheckResult:
     message: str
     details: list[str] = field(default_factory=list)
     duration: float = 0.0
+    findings: list[Finding] = field(default_factory=list)
+    skip_reason: str | None = None
+
+    @classmethod
+    def skip(
+        cls,
+        name: str,
+        message: str,
+        reason: str,
+        details: list[str] | tuple[str, ...] = (),
+    ) -> "CheckResult":
+        """Build the result of a check that did not look at anything.
+
+        Args:
+            name: Name of the check.
+            message: Human-readable message that says why it was skipped.
+            reason: One of SKIP_REASONS.
+            details: Optional detail lines, as a list or a tuple. A bare
+                string is not accepted by the type, since it would become
+                one detail for each character.
+
+        Returns:
+            A SKIPPED result with that reason and no findings.
+
+        Examples:
+            >>> result = CheckResult.skip(
+            ...     "typing", "No type checker configured", "not-configured"
+            ... )
+            >>> result.status, result.skip_reason
+            (<CheckStatus.SKIPPED: 'skipped'>, 'not-configured')
+        """
+        return cls(
+            name=name,
+            status=CheckStatus.SKIPPED,
+            message=message,
+            details=list(details),
+            skip_reason=reason,
+        )
 
     def __str__(self) -> str:
         """Return a formatted string representation.
@@ -149,14 +301,16 @@ class CheckResult:
         """Convert to dictionary for JSON serialization.
 
         Returns:
-            A dictionary with keys: name, status, message, details, duration.
-            The status is converted to its string value.
+            A dictionary with keys: name, status, message, details, duration,
+            findings, skip_reason. The status is converted to its string
+            value and each finding to a dictionary.
 
         Examples:
             >>> result = CheckResult("test", CheckStatus.OK, "Passed")
             >>> result.to_dict()  # doctest: +NORMALIZE_WHITESPACE
             {'name': 'test', 'status': 'ok', 'message': 'Passed',
-             'details': [], 'duration': 0.0}
+             'details': [], 'duration': 0.0, 'findings': [],
+             'skip_reason': None}
         """
         return {
             "name": self.name,
@@ -164,6 +318,8 @@ class CheckResult:
             "message": self.message,
             "details": self.details,
             "duration": self.duration,
+            "findings": [finding.to_dict() for finding in self.findings],
+            "skip_reason": self.skip_reason,
         }
 
 
@@ -280,6 +436,9 @@ class Report:
 
         Returns:
             True if any result has a status in the fail_on list.
+
+        Raises:
+            ValueError: If fail_on holds a value that is not a status.
 
         Examples:
             >>> report = Report()

@@ -4,12 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets the release workflow run this whole gate before it publishes.
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,20 +19,22 @@ jobs:
     name: Lint & type-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.2.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # 3.10 matches [tool.mypy] python_version and installs tomli
-          # (a conditional dependency) so mypy can resolve the tomllib fallback.
-          python-version: "3.10"
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          # 3.11 is the oldest supported version and matches
+          # [tool.mypy] python_version.
+          python-version: "3.11"
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --extra dev --extra linting --extra typing-mypy
+        run: uv sync --locked
       - name: Ruff (lint)
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check .
       - name: Ruff (format)
-        run: uv run ruff format --check src/ tests/
+        run: uv run ruff format --check .
       - name: Mypy
         run: uv run mypy src/pycmdcheck
 
@@ -40,15 +44,84 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --locked
+      - name: Run tests and doctests, and measure coverage
+        # Fails when the tests ran less than 95% of the package.
+        run: uv run pytest -q tests src/pycmdcheck --doctest-modules --cov=pycmdcheck --cov-fail-under=95
+      - name: Put the coverage table on the summary page of the run
+        # One table is enough, and it is shown for a failed run as well.
+        if: ${{ !cancelled() && matrix.python-version == '3.12' }}
+        run: uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+      - name: Check this repository with the triage profile
+        # The same command a triage bot runs. It must print one JSON document
+        # and report no errors about pycmdcheck itself.
+        run: |
+          uv run pycmdcheck --profile triage --json --exit-zero . > triage.json
+          uv run python -c "import json; report = json.load(open('triage.json')); assert report['summary']['error'] == 0, report"
+
+  test-windows:
+    name: Test (Windows, not required)
+    runs-on: windows-latest
+    # Windows is not a supported development platform yet. This job shows
+    # what breaks there without blocking a merge. The time limit keeps a
+    # run that hangs from holding up the release, which waits for this job.
+    continue-on-error: true
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked
       - name: Run tests
         run: uv run pytest -q
+
+  package:
+    name: Build and install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Check that the wheel holds the Agent Skill
+        # grep prints the line it finds and fails when there is none. The
+        # line must start with the path, so a copy under src/ does not count.
+        run: python3 -m zipfile -l dist/*.whl | grep -E "^pycmdcheck/\.agents/skills/pycmdcheck/SKILL\.md "
+      - name: Keep the sdist to source, tests, the skill and top-level documents
+        run: |
+          if tar -tzf dist/*.tar.gz | grep -E '/(docs|assets|\.github|\.devcontainer)/'; then
+            echo "The sdist contains files it should not ship." >&2
+            exit 1
+          fi
+      - name: Install the wheel and check that every built-in check is registered
+        run: |
+          uv venv smoke
+          uv pip install --python smoke dist/*.whl
+          smoke/bin/pycmdcheck --version
+          smoke/bin/python -c "from pycmdcheck.discovery import discover_checks; from pycmdcheck.profiles import ALL_CHECKS, DEPRECATED_CHECKS; assert set(discover_checks()) == ALL_CHECKS | DEPRECATED_CHECKS"
+      - name: Install the skill from the wheel and compare it with the copy in git
+        run: |
+          smoke/bin/pycmdcheck --install-skill "$RUNNER_TEMP/skills"
+          cmp "$RUNNER_TEMP/skills/pycmdcheck/SKILL.md" skills/pycmdcheck/SKILL.md

@@ -1,0 +1,13 @@
+{
+  "name": "pycmdcheck",
+  "owner": {
+    "name": "James Joseph Balamuta"
+  },
+  "description": "Check a Python package with pycmdcheck and fix what it reports.",
+  "plugins": [
+    {
+      "name": "pycmdcheck",
+      "source": "./"
+    }
+  ]
+}

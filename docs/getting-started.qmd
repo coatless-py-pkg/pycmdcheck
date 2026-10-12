@@ -4,6 +4,8 @@ title: Getting Started
 
 ## Installation
 
+pycmdcheck needs Python 3.11 or later.
+
 ### Using pip
 
 ```bash
@@ -12,126 +14,345 @@ pip install pycmdcheck
 
 ### Using uv
 
+Add pycmdcheck as a development dependency. A checker is not something your
+package needs at run time.
+
 ```bash
-uv add pycmdcheck
+uv add --dev pycmdcheck
 ```
 
-### Optional Dependencies
-
-pycmdcheck can use external tools for linting and type checking. Install the optional dependencies based on your needs:
+To run it once without installing it, use `uvx`.
 
 ```bash
-# For mypy type checking
-pip install pycmdcheck[typing-mypy]
-
-# For pyright type checking
-pip install pycmdcheck[typing-pyright]
-
-# For ruff linting
-pip install pycmdcheck[linting]
-
-# All optional dependencies
-pip install pycmdcheck[all]
+uvx pycmdcheck --profile triage path/to/package
 ```
 
 ## Your First Check
 
-### Using the CLI
+Start with the `triage` profile. It runs the 12 checks that only read files,
+so it needs nothing installed besides pycmdcheck itself, and it executes no
+code from the project.
 
-Navigate to your Python package directory and run:
+```bash
+pycmdcheck --profile triage
+```
+
+This is the output for a small package with a README, a license, a changelog,
+two modules and one test file. The path on the first line is shortened here.
+
+```
+Checking package: .../riverplot (profile: triage)
+
+┏━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃     ┃ Check           ┃ Message                                     ┃
+┡━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│  ✓  │ changelog       │ Changelog present                           │
+│  ℹ  │ ci              │ No CI configuration found                   │
+│  ℹ  │ citation        │ No citation file found                      │
+│  ℹ  │ community       │ 2 community file(s) not found in repository │
+│  ℹ  │ docs            │ Some documentation improvements suggested   │
+│  ✓  │ license         │ License file present                        │
+│  ✓  │ metadata        │ Package metadata is valid                   │
+│  ℹ  │ py_typed        │ Missing py.typed marker for typed package   │
+│  ✓  │ python_versions │ Python version requirement is current       │
+│  ✓  │ structure       │ Valid src layout structure                  │
+│  ✓  │ test_suite      │ Test suite present                          │
+│  ✓  │ version         │ Version 0.3.0 is consistent                 │
+└─────┴─────────────────┴─────────────────────────────────────────────┘
+
+7 ok | 5 note
+
+All checks passed!
+Run again with --verbose to see a suggestion for each finding.
+```
+
+Add `--verbose`, or `-v` for short, to see the detail lines of each check.
+They say what the check looked for and what it found. The option also prints
+a suggestion for each finding, which is one sentence that says what to do
+about it. This is what it adds for the `py_typed` note.
+
+```
+py_typed details:
+  Package directory: src/riverplot
+  Scanned 2 of 2 files: 2 of 2 public functions are annotated
+  Suggestion: Add an empty file named py.typed to src/riverplot.
+```
+
+In the same output the `docs` note says that the package has no documentation
+beyond its README. The `test_suite` check found the `tests/` directory. It
+does not run the tests.
+
+### A Full Run
 
 ```bash
 pycmdcheck
 ```
 
-You'll see output like (abbreviated — a default run executes every enabled check):
+With no profile, pycmdcheck runs every enabled check. That is all 20 built-in
+checks. Eight of them do more than read files. They run your tests and
+doctests, build the package, start a linter, a type checker and a formatter,
+compare your imports with your declared dependencies, for which they read the
+metadata of the installed packages, and request your project URLs over the
+network.
 
-```
-Checking package: /path/to/your/package
+Run a full run from the project's own environment, with the package and the
+tools below installed. A check whose tool is missing is reported as skipped,
+not as failed.
 
-┏━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ St… ┃ Check           ┃ Message                     ┃
-┡━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│  ✓  │ metadata        │ Package metadata is valid   │
-│  ✓  │ structure       │ Valid src layout structure  │
-│  ✓  │ license         │ License file present        │
-│  ✓  │ docs            │ Documentation present       │
-│  ✓  │ imports         │ All imports are valid       │
-│  ✓  │ tests           │ All tests passed            │
-│  ✓  │ linting         │ No linting issues found     │
-│  ✓  │ typing          │ No type errors found        │
-│  ✓  │ version         │ Version 0.1.0 is consistent │
-│  ℹ  │ ci              │ No CI configuration found   │
-│  …  │ …               │ … (all enabled checks run)  │
-└─────┴─────────────────┴─────────────────────────────┘
+The `linting`, `typing` and `formatting` checks run the tool your project has
+configured. They find it from files such as `pyproject.toml`, `ruff.toml` and
+`mypy.ini`. A project that has configured no tool for one of them gets a
+skipped result for that check and no list of findings from a tool it never
+chose. To run a tool anyway, name it in `pyproject.toml`, as
+[Configuration](configuration.qmd#tool-auto) shows.
 
-18 ok | 2 note
+### The Core Profile
 
-All checks passed!
+```bash
+pycmdcheck --profile core
 ```
 
-### Using Python
+The `core` profile runs 13 of the 20 checks. It leaves out `changelog`, `ci`,
+`citation`, `community`, `doctests`, `python_versions` and `urls`. Like a full
+run it executes code from the project, so it needs the same tools. Version
+0.1.1 called this profile `default`. That name still works and prints a
+warning.
+
+This is the report for the small package from above. The package has
+configured no linter, type checker or formatter. The run was also made from
+an environment where neither the package nor the `build` module was
+installed, which is the mistake the advice above is about.
+
+```
+┏━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃     ┃ Check        ┃ Message                                   ┃
+┡━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│  ○  │ build        │ 'build' module not installed              │
+│  ✓  │ dependencies │ No dependencies declared                  │
+│  ✓  │ docs         │ Documentation present                     │
+│  ○  │ formatting   │ No formatter configured                   │
+│  ✓  │ license      │ License file present                      │
+│  ○  │ linting      │ No linter configured                      │
+│  ✓  │ metadata     │ Package metadata is valid                 │
+│  ℹ  │ py_typed     │ Missing py.typed marker for typed package │
+│  ✓  │ structure    │ Valid src layout structure                │
+│  ✓  │ test_suite   │ Test suite present                        │
+│  ✗  │ tests        │ Tests could not be collected              │
+│  ○  │ typing       │ No type checker configured                │
+│  ✓  │ version      │ Version 0.3.0 is consistent               │
+└─────┴──────────────┴───────────────────────────────────────────┘
+
+7 ok | 1 note | 1 error | 4 skipped
+
+Failed: 1 error.
+Run again with --verbose to see a suggestion for each finding.
+```
+
+Four checks are skipped. One lacks its tool and three have no tool
+configured, and none of them counts against the package. A skipped check did
+not look at anything, and its result says why. The one error comes from the
+environment and not from the package. The tests import the package, the
+package is not installed there, and so pytest could not collect them.
+
+Two rows are about the tests. `test_suite` only looks for them, and `tests`
+runs them. The `docs` check passes here because the `core` profile does not
+turn on the look for documentation beyond the README, which `triage` does.
+
+## Tools the Checks Need
+
+| Check | Tool | Where pycmdcheck looks for it |
+|-------|------|-------------------------------|
+| `tests` | pytest, or Python's `unittest` when `runner = "unittest"` | `PATH` |
+| `doctests` | pytest | `PATH` |
+| `linting` | ruff, flake8 or pylint, whichever the project has configured | `PATH`. For ruff, also next to pycmdcheck's own Python. |
+| `typing` | mypy or pyright, whichever the project has configured | `PATH` |
+| `formatting` | ruff or black, whichever the project has configured | `PATH`, then next to pycmdcheck's own Python |
+| `build` | the `build` module | The environment that runs pycmdcheck |
+
+pytest, mypy, pyright, flake8 and pylint have to run where the project and its
+dependencies are installed. That is why pycmdcheck takes them only from
+`PATH`, the list of directories your shell searches for commands. Activate the
+project's environment before you run pycmdcheck, or run it through a tool
+that does so.
+
+The other 14 checks need no tool. [Configuration](configuration.qmd#tool-auto)
+explains how each check finds the project's tool and how to name one
+yourself.
+
+### Optional Dependencies
+
+Four of the tools can be installed together with pycmdcheck, through its
+extras.
+
+```bash
+pip install "pycmdcheck[linting]"         # ruff
+pip install "pycmdcheck[typing-mypy]"     # mypy
+pip install "pycmdcheck[typing-pyright]"  # pyright
+pip install "pycmdcheck[build]"           # the build module
+pip install "pycmdcheck[all]"             # all four
+```
+
+When ruff or the `build` module is missing, the skipped result names the
+extra in a detail line. mypy and pyright have to run where your project and
+its dependencies are installed, so their extras help only when pycmdcheck is
+installed in that same environment.
+
+There is no extra for pytest, flake8, pylint or black. pytest, flake8 and
+pylint have to run in the project's environment, as said above, so install
+the ones your project uses there.
+
+Version 0.1.1 also had the extras `dev` and `docs`. They held the tools for
+working on pycmdcheck itself and are dependency groups now. In a checkout of
+the repository, `uv sync` installs the `dev` group.
+
+## Using Python
 
 ```python
 from pycmdcheck import check
 
-# Check current directory
-report = check(".")
+report = check("riverplot", profile="triage")
 
-# Print summary
 print(f"Passed: {report.passed}")
 print(f"Results: {len(report.results)} checks run")
 
-# Iterate over results
 for result in report.results:
     print(f"{result.status.symbol} {result.name}: {result.message}")
 ```
 
+```
+Passed: True
+Results: 12 checks run
+✓ changelog: Changelog present
+ℹ ci: No CI configuration found
+ℹ citation: No citation file found
+ℹ community: 2 community file(s) not found in repository
+ℹ docs: Some documentation improvements suggested
+✓ license: License file present
+✓ metadata: Package metadata is valid
+ℹ py_typed: Missing py.typed marker for typed package
+✓ python_versions: Python version requirement is current
+✓ structure: Valid src layout structure
+✓ test_suite: Test suite present
+✓ version: Version 0.3.0 is consistent
+```
+
+`check()` takes the same choices as `--check` (`-c` for short), `--skip` (`-s`
+for short) and `--profile` on the command line. `checks` and `skip` name
+checks, and `profile` names a profile. Without any of them it performs a full
+run. `report.passed` is `True` when no check returned an error. The package
+offers no Python function that reads a `--config` file.
+
+In Python each name is an item of its own in a list, as in
+`checks=["metadata", "license"]`. A string with commas, such as
+`"metadata,license"`, is not split as it is on the
+[command line](cli.qmd#selecting-checks) and counts as one name.
+
+A name in `checks` that no installed check has raises `ValueError`, and so
+does an unknown profile name. This call misspells `license`.
+
+```python
+from pycmdcheck import check
+
+try:
+    check("riverplot", checks=["metadata", "licence"])
+except ValueError as error:
+    print(error)
+```
+
+```
+Unknown check(s): licence. Available checks: build, changelog, ci, citation, community, dependencies, docs, doctests, formatting, imports, license, linting, metadata, py_typed, python_versions, structure, test_suite, tests, typing, urls, version
+```
+
+An unknown name in `skip` is different. It is logged as a warning and
+ignored, so skipping a custom check that is not installed keeps working. The
+command line is stricter. There an unknown name after `--skip` is a usage
+error with exit code 2.
+
+Each result also says what it found in a form a program can compare. Its
+`findings` each carry a rule code, and a skipped result has a `skip_reason`.
+
+```python
+from pycmdcheck import check
+
+report = check("riverplot", profile="triage")
+
+for result in report.results:
+    for finding in result.findings:
+        print(f"{finding.status}: {finding.code}")
+```
+
+```
+note: ci.missing
+note: citation.missing
+note: community.missing-contributing
+note: community.missing-code-of-conduct
+note: docs.missing-site
+note: py_typed.missing
+```
+
+[Rule Codes](rules.qmd) lists every code and every skip reason.
+
 ## Understanding Check Results
 
-Each check returns one of five statuses:
+Each check returns one of five statuses.
 
-| Status | Symbol | Description |
-|--------|--------|-------------|
-| OK | ✓ | Check passed successfully |
-| NOTE | ℹ | Informational message, not a problem |
-| WARNING | ⚠ | Potential issue, should be reviewed |
-| ERROR | ✗ | Check failed |
-| SKIPPED | ○ | Check was skipped (e.g., tool not installed) |
+| Status | Symbol | Meaning |
+|--------|--------|---------|
+| OK | ✓ | The check found what it looked for |
+| NOTE | ℹ | Something you can improve. Not a defect in itself. |
+| WARNING | ⚠ | A likely problem that should be looked at |
+| ERROR | ✗ | The check failed |
+| SKIPPED | ○ | The check did not look at anything, for example because its tool is not installed or the project has not configured one |
+
+By default only an error makes the command exit with a failure code.
+[`--fail-on`](cli.qmd#fail-on) changes that. With `--fail-on warning`, for
+example, a warning fails the run as well.
 
 ## Built-in Checks
 
-pycmdcheck ships the following built-in checks (run `pycmdcheck --list` for the
-authoritative, up-to-date set):
+`pycmdcheck --list` prints the checks that are installed. These are the 20
+built-in ones and `imports`, a deprecated name that was merged into
+`dependencies` and is left out of every run unless you ask for it by name.
 
-| Check | Description |
-|-------|-------------|
-| `metadata` | Validate package metadata (pyproject.toml) |
-| `structure` | Validate package directory structure |
-| `tests` | Run package tests (pytest/unittest) |
-| `linting` | Run code linting (ruff/flake8/pylint) |
-| `typing` | Run type checking (mypy/pyright) |
-| `imports` | Validate package imports |
-| `license` | Check for license file |
-| `docs` | Check documentation (README, docstrings) |
-| `dependencies` | Audit declared vs. actual dependencies |
-| `build` | Verify package builds successfully |
-| `formatting` | Check code formatting (ruff format/black) |
-| `version` | Verify version consistency |
-| `py_typed` | Check for PEP 561 py.typed marker |
-| `community` | Check for community health files |
-| `ci` | Check for CI configuration |
-| `changelog` | Check for changelog or news file |
-| `citation` | Check for citation file |
-| `python_versions` | Check Python version support (EOL versions) |
-| `urls` | Validate project URLs are reachable |
-| `doctests` | Run doctests in package modules |
+```
+                        Available Checks
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Name            ┃ Description                                 ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ build           │ Verify package builds successfully          │
+│ changelog       │ Check for changelog or news file            │
+│ ci              │ Check for CI configuration                  │
+│ citation        │ Check for citation file                     │
+│ community       │ Check for community health files            │
+│ dependencies    │ Audit declared vs. actual dependencies      │
+│ docs            │ Check documentation (README, docstrings)    │
+│ doctests        │ Run doctests in package modules             │
+│ formatting      │ Check code formatting (ruff format/black)   │
+│ imports         │ Deprecated, use the dependencies check      │
+│ license         │ Check for license file                      │
+│ linting         │ Run code linting (ruff/flake8/pylint)       │
+│ metadata        │ Validate package metadata (pyproject.toml)  │
+│ py_typed        │ Check for PEP 561 py.typed marker           │
+│ python_versions │ Check Python version support (EOL versions) │
+│ structure       │ Validate package directory structure        │
+│ test_suite      │ Check that the project has a test suite     │
+│ tests           │ Run package tests (pytest/unittest)         │
+│ typing          │ Run type checking (mypy/pyright)            │
+│ urls            │ Validate project URLs are reachable         │
+│ version         │ Verify version consistency                  │
+└─────────────────┴─────────────────────────────────────────────┘
+```
 
-See [Configuration](configuration.qmd) for per-check options and
-[CLI Reference](cli.qmd) for profiles that select subsets of these.
+[Configuration](configuration.qmd) describes each check and its options, and
+the [Command-Line Reference](cli.qmd#profiles) lists the profiles that select
+subsets of them. To check repositories you do not own, a profile on the
+command line is usually enough, and [`--config`](cli.qmd#config-file) takes
+the settings from a file of your own when it is not.
 
 ## Next Steps
 
-- [CLI Reference](cli.qmd) - Learn all CLI options
-- [Configuration](configuration.qmd) - Configure checks in pyproject.toml
-- [Custom Checks](custom-checks.qmd) - Create your own checks
+- [Command-Line Reference](cli.qmd) for every option and the exit codes
+- [Configuration](configuration.qmd) for the settings in `pyproject.toml`
+- [Rule Codes](rules.qmd) for the codes and skip reasons a program can read
+- [Checking Untrusted Code](triage.qmd) for reviewing a repository you did not write
+- [Custom Checks](custom-checks.qmd) for writing your own checks

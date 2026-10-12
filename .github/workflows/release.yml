@@ -9,24 +9,39 @@ permissions:
   contents: read
 
 jobs:
+  gate:
+    name: Full CI gate
+    uses: ./.github/workflows/ci.yml
+
   build:
-    name: Test & build distributions
+    name: Build distributions
+    needs: gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           python-version: "3.12"
-          enable-cache: true
-      - name: Install dependencies
-        run: uv sync --extra dev
-      - name: Run tests (gate the release on green)
-        run: uv run pytest -q
+          # A release is built from a clean environment, not a shared cache.
+          enable-cache: false
+      - name: Check that the tag matches the package version
+        run: |
+          version="$(uv version --short)"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match the version in pyproject.toml (${version})." >&2
+            exit 1
+          fi
       - name: Build sdist and wheel
         run: uv build
+      - name: Check that the wheel holds the Agent Skill
+        # grep prints the line it finds and fails when there is none. The
+        # line must start with the path, so a copy under src/ does not count.
+        run: python3 -m zipfile -l dist/*.whl | grep -E "^pycmdcheck/\.agents/skills/pycmdcheck/SKILL\.md "
       - name: Upload distributions
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: dist
           path: dist/
@@ -44,9 +59,31 @@ jobs:
       id-token: write  # OIDC: required for PyPI Trusted Publishing (no token)
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+
+  github-release:
+    name: Create GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed to create the release and attach the files
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: Create the release from the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        # The whole of a release can land in one commit, and the generated
+        # notes are then close to empty. The text of --notes stands above them.
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag \
+            --notes "What is new is listed in [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/CHANGELOG.md)."
