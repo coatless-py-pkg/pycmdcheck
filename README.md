@@ -30,6 +30,12 @@ installs it. The extras are `linting` for ruff, `typing-mypy`,
 pip install "pycmdcheck[all]"
 ```
 
+To run one release without installing it, use `uvx`.
+
+```bash
+uvx pycmdcheck@0.2.0 --profile triage /path/to/repository
+```
+
 ## Usage
 
 ```bash
