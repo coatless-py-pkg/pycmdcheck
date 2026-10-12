@@ -9,10 +9,16 @@ website:
     left:
       - text: Getting Started
         href: getting-started.qmd
-      - text: CLI Reference
+      - text: Command Line
         href: cli.qmd
       - text: Configuration
         href: configuration.qmd
+      - text: Rule Codes
+        href: rules.qmd
+      - text: Untrusted Code
+        href: triage.qmd
+      - text: AI Assistant
+        href: assistants.qmd
       - text: Custom Checks
         href: custom-checks.qmd
       - text: API Reference
@@ -54,23 +60,48 @@ quartodoc:
         - check
         - CheckResult
         - CheckStatus
+        - Finding
         - Report
+        - results.most_severe
     - title: Check Protocol
       desc: Base classes for implementing custom checks
       contents:
         - checks.base.Check
         - checks.base.BaseCheck
     - title: Built-in Checks
-      desc: All built-in check implementations
+      desc: The 20 built-in check implementations
       contents:
-        - checks.metadata.MetadataCheck
-        - checks.structure.StructureCheck
-        - checks.tests.TestsCheck
-        - checks.linting.LintingCheck
-        - checks.typing.TypingCheck
-        - checks.imports.ImportsCheck
-        - checks.license.LicenseCheck
+        - checks.build.BuildCheck
+        - checks.changelog.ChangelogCheck
+        - checks.ci.CICheck
+        - checks.citation.CitationCheck
+        - checks.community.CommunityCheck
+        - checks.dependencies.DependenciesCheck
         - checks.docs.DocsCheck
+        - checks.doctests.DoctestsCheck
+        - checks.formatting.FormattingCheck
+        - checks.license.LicenseCheck
+        - checks.linting.LintingCheck
+        - checks.metadata.MetadataCheck
+        - checks.py_typed.PyTypedCheck
+        - checks.python_versions.PythonVersionsCheck
+        - checks.structure.StructureCheck
+        - checks.test_suite.TestSuiteCheck
+        - checks.tests.TestsCheck
+        - checks.typing.TypingCheck
+        - checks.urls.URLsCheck
+        - checks.version.VersionCheck
+    - title: Deprecated Checks
+      desc: Kept for one release. A deprecated check is always skipped.
+      contents:
+        - checks.imports.ImportsCheck
+    - title: Profiles
+      desc: Named sets of checks and the options they set
+      contents:
+        - profiles.Profile
+        - profiles.get_profile
+        - profiles.list_profiles
+        - profiles.apply_profile
     - title: Runner & Discovery
       desc: Advanced API for running checks programmatically
       contents:
@@ -83,3 +114,4 @@ quartodoc:
         - config.load_config
         - config.get_check_config
         - config.is_check_enabled
+        - config.validate_config

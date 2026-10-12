@@ -1,0 +1,409 @@
+---
+title: Rule Codes
+---
+
+A check result says what it found in two ways. The `message` and the `details`
+are written for people. The `findings` are written for programs. Each finding
+names the rule it comes from with a code, and this page lists every code.
+
+Findings, codes, hints and skip reasons are new in version 0.2.0.
+
+## Findings
+
+Every result has a list named `findings`. It is in the
+[JSON report](cli.qmd#json-output) and on `CheckResult` in the Python API. A
+finding has four parts.
+
+| Part | Meaning |
+|------|---------|
+| `code` | The rule the finding comes from, such as `metadata.missing-required` |
+| `status` | How severe the finding is, which is `note`, `warning` or `error` |
+| `message` | One line of plain text that says what was found |
+| `hint` | One sentence that says what to do about the finding, or `null` when the check gives none |
+
+A hint is the advice that goes with a finding, such as
+`Add a file named LICENSE with the full text of your license to the project root.`
+Every rule of a built-in check has one, and a custom check may leave it out.
+The terminal report prints the hints of a check with `--verbose`, each in a
+line that starts with `Suggestion:`, and the Markdown report lists them after
+the detail lines with the same label. A suggestion in those two reports and
+the `hint` of a finding are the same sentence.
+
+The status of a result and its findings always fit together.
+
+| Result status | Findings | `skip_reason` |
+|---------------|----------|---------------|
+| `ok` | None | `null` |
+| `note`, `warning` or `error` | At least one. The result has the status of its most severe finding. | `null` |
+| `skipped` | None | One of the [skip reasons](#skip-reasons) |
+
+Every built-in check keeps to this table. A custom check should do the same,
+and [Custom Checks](custom-checks.qmd#rules-and-findings) shows how. pycmdcheck
+does not enforce it, so a custom check written for version 0.1.1 returns
+results with an empty `findings` list.
+
+## Codes
+
+A code is the check name, a dot, and the name of the rule in lower case with
+hyphens. `license.missing` is the rule of the `license` check for a project
+with no license file.
+
+A code is a stable public name. The wording of a message or a detail line can
+change from one release to the next, so a program should compare codes and
+never the text.
+
+Most rules give one finding in a result and put a count in its message, such
+as `Found 3 linting issue(s)`. The lines for each issue stay in `details`. One
+rule gives several. `metadata.invalid-value` appears once for each value that
+cannot be right.
+
+`pycmdcheck --list-rules` prints the rules of the checks installed in your
+environment, custom checks included, each with its code and its hint. The
+listing puts the label `Suggestion:` before the hint, as the terminal report
+and the Markdown report do. The [command-line reference](cli.qmd#list-rules)
+shows its output.
+
+## Skip Reasons
+
+A skipped result means that the check did not look at anything. Its
+`skip_reason` says why. For a built-in check it is always one of these nine
+values. A custom check written for version 0.1.1 leaves it `null`.
+
+| Reason | Meaning | Checks that give it |
+|--------|---------|---------------------|
+| `tool-missing` | The tool the check needs is not installed | `build`, `doctests`, `formatting`, `linting`, `tests`, `typing` |
+| `not-configured` | The project has not chosen a tool for the check | `formatting`, `linting`, `typing` |
+| `not-applicable` | The project has nothing of the kind the check looks at | `dependencies`, `docs`, `doctests`, `py_typed`, `python_versions`, `structure`, `urls`, `version` |
+| `prerequisite-failed` | The check cannot work because something that another check reports is missing or cannot be read | `build`, `dependencies`, `formatting`, `linting`, `python_versions`, `tests`, `typing`, `urls`, `version` |
+| `network-unavailable` | The check needs the network and could reach no host at all | `urls` |
+| `import-failed` | The check could not import the code it needed to look at | `doctests` |
+| `parse-failed` | The check could not parse the code it needed to look at, most often because of a syntax error or of syntax newer than the Python that runs pycmdcheck | `docs`, `py_typed`, `version` |
+| `fail-fast` | [`--fail-fast`](cli.qmd#fail-fast) stopped the run before the check started | Any check. pycmdcheck sets this reason itself. |
+| `deprecated` | The check has been merged into another one | `imports` |
+
+A skipped result has no finding and so no hint. Its advice, such as how to
+install a missing tool, is in its detail lines.
+
+Two rules decide between a skipped result and a note.
+
+- A note always names something the author of the package can improve. A
+  check that had nothing to look at is skipped. It does not return a note.
+- A real shortcoming keeps its status. A project with no tests gets a warning
+  from the `test_suite` check with the code `test_suite.missing`. The report
+  does not hide it behind a skipped check.
+
+When one cause would show up in several checks, one check owns it. A
+`pyproject.toml` that cannot be read is reported by `metadata` with the code
+`metadata.unreadable-pyproject`. The other checks that need the file do not
+repeat the problem. They are skipped with the reason `prerequisite-failed`,
+and a detail line points at the `metadata` check. The
+[example](#example) at the end of this page shows such a pair.
+
+A project with no tests is a second case. The `test_suite` check owns it and
+gives the warning. The `tests` check, which would run the tests, has nothing
+to run. It is skipped with the reason `prerequisite-failed` and points at
+`test_suite`.
+
+## Rules of Each Check
+
+The tables give the status each code carries and, under "Suggestion", its
+hint. A check can also return `ok`, which has no code, and `skipped`, which
+has a reason from the table above.
+
+A report can show a more exact sentence than the tables do, because some
+checks fill in a file name, a version number or the place where the project
+keeps a setting. For `py_typed.missing` the table says to add the
+file to the package directory, and a report names that directory, as in
+`Add an empty file named py.typed to src/demo.`
+
+### build
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `build.could-not-run` | warning | The build module is installed but could not run | Run `python -m build` with the same `args` in the project directory and fix the error it prints. |
+| `build.failed` | error | The package does not build | Run `python -m build` in the project directory and fix the first error it prints. |
+| `build.invalid-args` | error | The `args` option is not a list of strings | Write `args` as a list with one string for each argument, so `"--wheel --sdist"` becomes `["--wheel", "--sdist"]`. |
+| `build.missing-artifacts` | warning | The build produced no wheel or source distribution | Remove `--outdir` and `-o` from the `args` option of the `build` check, so the build writes where the check looks. |
+| `build.timed-out` | error | The build ran longer than the timeout | Set a longer `timeout` in `[tool.pycmdcheck.checks.build]`, or in the `--config` file when the run uses one. |
+
+### changelog
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `changelog.missing` | note | No changelog file, directory of notes or changelog link found | Add a `CHANGELOG.md` file with your release notes to the project root, or link them as Changelog in `[project.urls]` of `pyproject.toml`. |
+| `changelog.too-short` | note | The changelog file in the project root has fewer than 50 characters | Write at least 50 characters of release notes in the changelog file, or link them as Changelog in `[project.urls]` of `pyproject.toml`. |
+| `changelog.unreadable` | warning | The changelog file could not be read | Give yourself read permission on the changelog file, for example with `chmod u+r CHANGELOG.md`. |
+
+### ci
+
+CI stands for continuous integration.
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `ci.missing` | note | No CI configuration file found | Add a GitHub Actions workflow such as `.github/workflows/ci.yml`, or the configuration file of another CI provider. |
+
+### citation
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `citation.missing` | note | No citation file or other citation metadata found | Add a `CITATION.cff` file to the project root, in the format that https://citation-file-format.github.io/ describes. |
+
+### community
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `community.missing-code-of-conduct` | note | No code of conduct found in the repository | Add a `CODE_OF_CONDUCT.md` file to the project root or `.github/`, with a text such as the Contributor Covenant. |
+| `community.missing-contributing` | note | No contributing guide found in the repository | Add a `CONTRIBUTING.md` file to the project root or `.github/` that says how to report problems and send changes. |
+
+### dependencies
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `dependencies.undeclared` | warning | A third-party module is imported unconditionally but not declared | Add the package that provides each undeclared module to `dependencies` in `[project]` of `pyproject.toml`. |
+| `dependencies.unparsed-sources` | note | Source files were found but none of them could be parsed | Correct the syntax errors in the files named in the details, or run pycmdcheck with the Python version the package is written for. |
+| `dependencies.unused` | note | A declared dependency is never imported | Remove each dependency the package does not need from `dependencies` in `[project]` of `pyproject.toml`. |
+
+### docs
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `docs.docstrings-not-counted` | note | A minimum docstring coverage is set and no public item was counted because a file could not be parsed | Look in the details for the Python files that were left out and why, and put that right so that their docstrings can be counted. |
+| `docs.missing-docstrings` | note | Public items have no docstring, or fewer have one than the minimum | Add a docstring to every public module, class, function and method that has none. |
+| `docs.missing-installation` | note | The README does not mention installation | Add an Installation section to the README that shows the command to install the package. |
+| `docs.missing-readme` | warning | No README file was found | Add a `README.md` file to the project root with at least 50 words on what the package does and how to use it. |
+| `docs.missing-site` | note | No documentation beyond the README was found | Add a page such as `docs/index.md`, or link a site other than the repository page as Documentation in `[project.urls]` of `pyproject.toml`. |
+| `docs.missing-usage` | note | The README does not mention usage | Add a Usage section to the README with a short example of the package in use. |
+| `docs.readme-too-short` | note | The README has fewer than 50 words | Write at least 50 words in the README about what the package does and how to use it. |
+| `docs.unreadable-readme` | warning | The README could not be read | Give yourself read permission on the README, for example with `chmod u+r README.md`. |
+
+`docs.missing-installation` and `docs.missing-usage` need the option
+`check_readme_sections`. `docs.missing-site` needs the option
+`check_docs_site`, and `docs.missing-docstrings` needs the docstring scan.
+`docs.docstrings-not-counted` needs a `min_docstring_coverage` above 0.
+[Configuration](configuration.qmd#docs) describes all of them.
+
+### doctests
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `doctests.could-not-run` | warning | pytest is installed but could not run | Run `pytest --doctest-modules` on the package with the same `args` in the project directory and fix the error it prints. |
+| `doctests.failed` | error | Doctests failed | Correct each failed example or the code it calls, or mark an example that cannot run here with `# doctest: +SKIP`. |
+| `doctests.invalid-args` | error | The `args` option is not a list of strings | Write `args` as a list with one string for each argument, so `"-x -q"` becomes `["-x", "-q"]`. |
+| `doctests.timed-out` | error | The doctests ran longer than the timeout | Set a longer `timeout` in `[tool.pycmdcheck.checks.doctests]`, or in the `--config` file when the run uses one. |
+
+### formatting
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `formatting.could-not-run` | warning | The formatter is installed but could not run | Run '`ruff format --check .`' or '`black --check .`' with the same `args` in the project directory and fix the error it prints. |
+| `formatting.invalid-args` | error | The `args` option is not a list of strings | Write `args` as a list with one string for each argument, so `"--line-length 100"` becomes `["--line-length", "100"]`. |
+| `formatting.timed-out` | error | The formatter ran longer than the timeout | Set a longer `timeout` in `[tool.pycmdcheck.checks.formatting]`, or in the `--config` file when the run uses one. |
+| `formatting.unformatted-files` | warning | The formatter would change files | Run '`ruff format .`' or '`black .`' with the same `args` in the project directory, whichever formatter the check used. |
+| `formatting.unsupported-tool` | error | The `tool` option names an unsupported formatter | Set `tool` in `[tool.pycmdcheck.checks.formatting]` to `"auto"`, `"ruff"` or `"black"`. |
+
+### license
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `license.missing` | warning | No license file was found | Add a file named `LICENSE` with the full text of your license to the project root. |
+| `license.not-osi-approved` | note | The declared license expression names no license approved by the Open Source Initiative (OSI) | Choose an OSI-approved license such as MIT or Apache-2.0, then put its text in the license file and its identifier in `license` in `pyproject.toml`. |
+| `license.too-short` | warning | The license file is empty or too short to be a license text | Put the full text of your license, at least 50 characters, in the license file. |
+| `license.unreadable` | warning | The license file could not be read | Give yourself read permission on the license file, for example with `chmod u+r LICENSE`. |
+
+A result can carry `license.not-osi-approved` next to one of the three
+warnings. [Configuration](configuration.qmd#license) says which declared
+licenses are graded.
+
+### linting
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `linting.could-not-run` | warning | The linter is installed but could not run | Run `ruff check`, `flake8` or `pylint`, whichever the check used, with the same `args` in the project directory and fix the error it prints. |
+| `linting.invalid-args` | error | The `args` option is not a list of strings, or makes ruff write files or keep running | Write `args` as a list with one string for each argument, and for ruff leave out the options that write files or keep running. |
+| `linting.issues` | warning | The linter reported issues | Fix what the linter lists, or switch off a rule in the linter's configuration. |
+| `linting.timed-out` | error | The linter ran longer than the timeout | Set a longer `timeout` in `[tool.pycmdcheck.checks.linting]`, or in the `--config` file when the run uses one. |
+| `linting.unsupported-tool` | error | The `tool` option names an unsupported linter | Set `tool` in `[tool.pycmdcheck.checks.linting]` to `"auto"`, `"ruff"`, `"flake8"` or `"pylint"`. |
+
+### metadata
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `metadata.invalid-value` | note | A `[project]` value cannot be right, such as a version that is not a valid version number | Correct the value in the `[project]` table of `pyproject.toml`, for example `version = "1.2.0"`. |
+| `metadata.legacy-setup` | warning | The metadata is in `setup.py` or `setup.cfg`, not in `pyproject.toml` | Move the metadata from `setup.py` or `setup.cfg` to a `[project]` table in `pyproject.toml`. |
+| `metadata.license-classifier-conflict` | warning | A setuptools project lists a license expression and a License classifier, which setuptools 77 and later refuses to build | Remove every classifier that starts with `License ::` from `classifiers` in the `[project]` table of `pyproject.toml`. |
+| `metadata.missing` | error | No package metadata in `pyproject.toml`, `setup.py` or `setup.cfg` | Add a `[project]` table with `name` and `version` to `pyproject.toml` in the project root. |
+| `metadata.missing-build-system` | note | `pyproject.toml` has no `[build-system]` table | Add a `[build-system]` table to `pyproject.toml` that names your build backend in `requires` and `build-backend`. |
+| `metadata.missing-extended` | note | One of the extended fields is missing. They are `authors` or `maintainers`, `urls` and `classifiers`. | Add each missing field to the `[project]` table of `pyproject.toml`. |
+| `metadata.missing-project-table` | note | `pyproject.toml` has no `[project]` table, and the build backend reads the metadata from its own table or file | Add a `[project]` table to `pyproject.toml` that sets `name`, and sets `version` or lists it in `dynamic`. |
+| `metadata.missing-readme-file` | note | The readme file that `[project]` names was not found | Add the file that `readme` names, or change `readme` in the `[project]` table of `pyproject.toml` to the file you have. |
+| `metadata.missing-recommended` | note | One of the recommended fields is missing. They are `description`, `readme`, `license` and `requires-python`. | Add each missing field to the `[project]` table of `pyproject.toml`. |
+| `metadata.missing-required` | error | One of the required fields, `name` and `version`, is missing | Add each missing field to the `[project]` table of `pyproject.toml`. |
+| `metadata.unreadable-pyproject` | error | `pyproject.toml` cannot be read or is not valid TOML | Correct `pyproject.toml` so that it is valid TOML, saved as UTF-8 with no byte order mark. |
+
+The `metadata` check is never skipped. It owns the report of a
+`pyproject.toml` that is missing or cannot be read and of a missing
+`[project]` table.
+
+### py_typed
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `py_typed.missing` | note | A package with mostly annotated public functions has no `py.typed` marker | Add an empty file named `py.typed` to the package directory. |
+
+### python_versions
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `python_versions.allows-eol` | note | The Python constraint allows a version that has reached its end of life | Raise the lowest version that the Python constraint allows to one that is still supported. |
+| `python_versions.invalid-requires-python` | note | The Python constraint in a Poetry table, `setup.cfg` or `setup.py` is not a valid version specifier | Write the Python constraint as a version specifier such as `>=3.12`. |
+| `python_versions.missing-requires-python` | note | No Python constraint is declared in a legacy Poetry table, `setup.cfg` or `setup.py` | Add `python` to `[tool.poetry.dependencies]` in `pyproject.toml`, or `python_requires` to `setup.py` or `[options]` in `setup.cfg`. |
+
+The last two codes cover a constraint that is kept outside the `[project]`
+table. A `requires-python` that the `[project]` table lacks or misstates
+belongs to the `metadata` check, and `python_versions` is then skipped.
+
+### structure
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `structure.missing-init` | warning | The package directory has no `__init__.py` | Add an empty `__init__.py` file to the package directory. |
+| `structure.missing-package` | error | No importable package or module was found | Add an `__init__.py` file to the directory that holds your code, or create `src/<name>/__init__.py` if there is no code yet. |
+| `structure.non-python-sources` | note | `src/` holds no Python package and nothing says the build is native | Add a package directory with an `__init__.py` file to `src/`, or list the build tool, such as maturin or Cython, in `requires` under `[build-system]`. |
+| `structure.unrecognized-layout` | note | Python files exist only outside the layouts the check knows | Move the package to `src/<name>/`, or name the directory that holds it in the build settings, such as `where` in `[tool.setuptools.packages.find]`. |
+
+### test_suite
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `test_suite.missing` | warning | The project has no tests | Add a `tests/` directory to the project root with at least one test file, such as `tests/test_basic.py`. |
+
+This check only looks for the tests. It is never skipped.
+
+### tests
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `tests.collection-failed` | error | pytest could not collect the tests | Run `pytest --collect-only` in the project directory and fix the import or syntax error it prints, or install the package first if pytest cannot import it. |
+| `tests.could-not-run` | warning | The test runner is installed but could not run | Run `pytest`, or `python -m unittest discover -s tests`, with the same `args` in the project directory and fix the error it prints. |
+| `tests.failed` | error | Tests failed | Run `pytest`, or `python -m unittest discover -s tests`, in the project directory and fix each test that fails. |
+| `tests.invalid-args` | error | The `args` option is not a list of strings | Write `args` as a list with one string for each argument, so `"-k smoke"` becomes `["-k", "smoke"]`. |
+| `tests.none-collected` | warning | The test runner collected no tests | Name test files `test_*.py` and test functions `test_*`, and for the unittest runner put them in a `unittest.TestCase` class. |
+| `tests.timed-out` | error | The tests ran longer than the timeout | Set a longer `timeout` in `[tool.pycmdcheck.checks.tests]`, or in the `--config` file when the run uses one. |
+| `tests.unsupported-runner` | error | The `runner` option names an unsupported runner | Set `runner` in `[tool.pycmdcheck.checks.tests]` to `"pytest"` or `"unittest"`. |
+
+A project with no tests is not among these codes. The `test_suite` check
+reports it, and this check is then skipped.
+
+### typing
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `typing.could-not-run` | warning | The type checker is installed but could not run | Run `mypy` or `pyright`, whichever the check used, with the same `args` in the project directory and fix the error it prints. |
+| `typing.errors` | error | The type checker reported errors | Fix the code or its annotations at each file and line that mypy or pyright reports. |
+| `typing.invalid-args` | error | The `args` option is not a list of strings | Write `args` as a list with one string for each argument, so `"--python-version 3.11"` becomes `["--python-version", "3.11"]`. |
+| `typing.timed-out` | error | The type checker ran longer than the timeout | Set a longer `timeout` in `[tool.pycmdcheck.checks.typing]`, or in the `--config` file when the run uses one. |
+| `typing.unsupported-tool` | error | The `tool` option names an unsupported type checker | Set `tool` in `[tool.pycmdcheck.checks.typing]` to `"auto"`, `"mypy"` or `"pyright"`. |
+
+### urls
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `urls.invalid-value` | note | A value in the `[project.urls]` table is not a string | Write each value in `[project.urls]` of `pyproject.toml` as a quoted string, such as `Homepage = "https://example.com"`. |
+| `urls.unreachable` | warning | A project URL answers HTTP 404 or 410, or its host name does not exist | Correct each failed address, usually under `[project.urls]` in `pyproject.toml`, or remove the entry if the page is gone. |
+| `urls.unverified` | note | A project URL could not be verified, for example because of HTTP 403, a server error or a timeout | Open in a browser each address that could not be verified, and correct it in `pyproject.toml` if it does not load there. |
+
+### version
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `version.mismatch` | error | `__version__` in the code differs from the version in `pyproject.toml` | Make `__version__` in the code and `version` in `pyproject.toml` the same, or read `__version__` with `importlib.metadata.version()`. |
+
+### pycmdcheck
+
+pycmdcheck has four rules of its own, for a check that gave no result. They
+are the only codes that do not start with a check name.
+
+| Code | Status | Description | Suggestion |
+|-----------|------|---------------|--------------------|
+| `pycmdcheck.check-exited` | error | The check called `sys.exit()` | Tell the author of the check, or leave the check out with `--skip`. |
+| `pycmdcheck.check-not-found` | error | No check is registered under the requested name | Run `pycmdcheck --list` and use one of the check names it prints. |
+| `pycmdcheck.check-raised` | error | The check raised an exception | Run again with `--debug` and send the traceback to the author of the check. |
+| `pycmdcheck.invalid-result` | error | The check did not return a `CheckResult` | Tell the author of the check, or leave the check out with `--skip`. |
+
+The `name` of such a result is still the name of the check that failed. Only
+the code of its finding starts with `pycmdcheck`. So a program should take the
+check from `name` and not from the part of a code before the dot. Each of
+these findings points at a fault in the check, or in pycmdcheck, and says
+nothing about the package.
+
+`pycmdcheck.check-not-found` does not appear in a normal run. An unknown name
+given to `--check`, or `-c` for short, is a usage error with exit code 2, and
+`check()` raises `ValueError` for it, both before any check runs.
+
+The deprecated `imports` check has no rules. It is always skipped with the
+reason `deprecated`.
+
+## Example {#example}
+
+This project is a single module. Its `pyproject.toml` has a `[build-system]`
+table, and its `[project]` table holds a name, a version and a description,
+and nothing else.
+
+```bash
+pycmdcheck --check metadata,python_versions --json --exit-zero
+```
+
+The two check names are separated by a comma with no space after it. The
+option can also be repeated, as in `--check metadata --check python_versions`.
+[Selecting Checks](cli.qmd#selecting-checks) in the command-line reference
+has the full rules.
+
+These are the two entries of `results` in the report. The other keys are left
+out.
+
+```json
+[
+  {
+    "name": "metadata",
+    "status": "note",
+    "message": "Some recommended metadata fields are missing",
+    "details": [
+      "Missing recommended fields: readme, license, requires-python",
+      "Missing extended metadata fields: authors or maintainers, urls, classifiers"
+    ],
+    "duration": 0.0025551319122314453,
+    "findings": [
+      {
+        "code": "metadata.missing-recommended",
+        "status": "note",
+        "message": "Missing recommended fields: readme, license, requires-python",
+        "hint": "Add each missing field to the [project] table of pyproject.toml."
+      },
+      {
+        "code": "metadata.missing-extended",
+        "status": "note",
+        "message": "Missing extended metadata fields: authors or maintainers, urls, classifiers",
+        "hint": "Add each missing field to the [project] table of pyproject.toml."
+      }
+    ],
+    "skip_reason": null
+  },
+  {
+    "name": "python_versions",
+    "status": "skipped",
+    "message": "No requires-python specified",
+    "details": [
+      "The metadata check reports a missing or invalid requires-python"
+    ],
+    "duration": 0.0019381046295166016,
+    "findings": [],
+    "skip_reason": "prerequisite-failed"
+  }
+]
+```
+
+The missing `requires-python` is reported once, by `metadata`, and the hint
+of that finding says what to do. The `python_versions` check has no value to
+judge, so it is skipped and says which check holds the reason.
+[Checking Untrusted Code](triage.qmd#reading-the-report) shows how a program
+can read a whole report.

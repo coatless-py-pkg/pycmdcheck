@@ -1,0 +1,11 @@
+{
+  "name": "pycmdcheck",
+  "version": "0.2.0",
+  "description": "Check a Python package with pycmdcheck and fix what it reports.",
+  "author": {
+    "name": "James Joseph Balamuta"
+  },
+  "homepage": "https://py-pkg.thecoatlessprofessor.com/pycmdcheck/",
+  "repository": "https://github.com/coatless-py-pkg/pycmdcheck",
+  "license": "MIT"
+}

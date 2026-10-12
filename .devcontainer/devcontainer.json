@@ -1,60 +1,35 @@
 // For format details, see https://aka.ms/devcontainer.json.
 {
-    "name": "Python 3",
-    "build": {
-        // More info: https://containers.dev/guide/dockerfile
-        "dockerfile": "Dockerfile",
-        // Change VARIANT to pick different Python version: 3, 3.10, 3.11, 3.12, ...
-        "args": {
-            "VARIANT": "3.12"
-        }
+    "name": "pycmdcheck",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12",
+    // Keep the container's environment out of the project folder, so it
+    // never replaces a .venv that was made on the host.
+    "containerEnv": {
+        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
     },
+    // The image comes with pipx, which puts uv on the PATH.
+    "onCreateCommand": "pipx install uv",
+    "postCreateCommand": "uv sync --all-extras --all-groups",
     "customizations": {
         "vscode": {
             "extensions": [
-                // Python
                 "ms-python.python",
-                "ms-python.black-formatter",
-                "ms-toolsai.jupyter",
-                "ms-toolsai.jupyter-renderers",
-                "ms-python.vscode-pylance",
-                // Docker
-                "ms-azuretools.vscode-docker",
-                // Documentation
-                "njpwerner.autodocstring",
-                // Format
-                "stkb.rewrap",
-                // Lint
-                "charliermarsh.ruff",
-                // Gen AI
-                "GitHub.copilot"
+                "charliermarsh.ruff"
             ],
             "settings": {
-                // Editor
-                "editor.formatOnSave": true,
-                // Files
                 "files.insertFinalNewline": true,
                 "files.trimTrailingWhitespace": true,
-                // Testing
-                "python.testing.pytestArgs": [
-                    "."
-                ],
-                "python.testing.unittestEnabled": false,
+                "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
                 "python.testing.pytestEnabled": true,
-                "python.testing.autoTestDiscoverOnSaveEnabled": true,
-                // Formatting
-                "python.formatting.provider": "black",
-                "python.formatting.blackArgs": [
-                    "--no-color"
+                "python.testing.unittestEnabled": false,
+                "python.testing.pytestArgs": [
+                    "tests"
                 ],
-                // Linting
-                "python.linting.mypyEnabled": true,
-                "python.linting.enabled": true
-            },
-            "git.branchProtection": [
-                "main",
-                "master"
-            ]
+                "[python]": {
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "editor.formatOnSave": true
+                }
+            }
         }
     },
     "remoteUser": "vscode"

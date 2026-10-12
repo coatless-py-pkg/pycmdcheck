@@ -5,67 +5,98 @@ subtitle: Python package quality checker inspired by R CMD check
 
 ## Overview
 
-**pycmdcheck** is a comprehensive quality checker for Python packages, inspired by R's `R CMD check`. It validates your package structure, metadata, tests, linting, type checking, and more—all from a single command.
+**pycmdcheck** checks a Python package the way `R CMD check` checks an R
+package. One command looks at the metadata, layout, license, documentation,
+tests, code style and types of a project and reports where it falls short.
 
-## Features
+## What It Does
 
-- **Comprehensive Checks**: Validates metadata, structure, tests, linting, typing, imports, license, and documentation
-- **Configurable**: Enable/disable checks and configure tools via `pyproject.toml`
-- **Multiple Backends**: Supports ruff/flake8/pylint for linting, mypy/pyright for type checking, and ruff/black (auto-detected) for formatting
-- **Extensible**: Create custom checks via entry points
-- **Beautiful Output**: Rich terminal output with status indicators and details
-- **Parallel Execution**: Runs checks in parallel for speed
+- Runs 20 built-in checks. `pycmdcheck --list` prints them.
+- Reads its settings from `pyproject.toml`, where each check can be turned off
+  or configured. To check repositories you do not own, a
+  [profile](cli.qmd#profiles) on the command line is usually enough, and
+  [`--config`](cli.qmd#config-file) takes the settings from a file of your
+  own when it is not.
+- Offers profiles, which are named sets of checks. The `triage` profile only
+  reads files, so it works on a repository that has not been installed. The
+  `core` profile runs the tests, the build and the code-quality tools next to
+  the checks of the metadata, the layout and the license.
+- Starts external tools for linting, type checking and formatting. Each of
+  these checks runs the tool the project has configured, which is ruff, flake8
+  or pylint for linting, mypy or pyright for type checking, and ruff or black
+  for formatting. A project that has configured none is skipped for that
+  check and is not held to a tool it never chose.
+- Accepts custom checks that other packages register through entry points.
+- Prints a table for the terminal, JSON for another program, or Markdown for
+  a comment on a pull request.
+- Makes a suggestion for each finding of a built-in check, in one sentence
+  that says what to do about it. Add `--verbose` to a run to print the
+  suggestions.
+- Gives every finding a rule code, such as `license.missing`, and every
+  skipped check a reason. Both are stable names that a program can compare,
+  and `pycmdcheck --list-rules` prints the codes and a suggestion for each.
 
 ## Quick Example
 
 ### Command Line
 
 ```bash
-# Check current directory
+# The checks that only read files
+pycmdcheck --profile triage
+
+# Every enabled check
 pycmdcheck
 
-# Check specific directory
-pycmdcheck /path/to/package
+# Two checks only (-c is short for --check)
+pycmdcheck --check metadata,license
 
-# Run only specific checks
-pycmdcheck -c tests -c linting
-
-# List available checks
+# List the installed checks
 pycmdcheck --list
 ```
+
+A run with no profile executes code from the project. It runs the tests,
+builds the package, starts the linter and the type checker the project has
+configured, and requests the project URLs over the network. To check a
+repository you did not write, use `--profile triage` and read
+[Checking Untrusted Code](triage.qmd) first.
 
 ### Python API
 
 ```python
 from pycmdcheck import check
 
-# Check a package
-report = check(".")
+report = check(".", profile="triage")
 
-# Check results
 if report.passed:
-    print("All checks passed!")
-else:
-    for result in report.results:
-        print(f"{result.status}: {result.name} - {result.message}")
+    print("No check returned an error")
+for result in report.results:
+    print(f"{result.status}: {result.name} - {result.message}")
 ```
 
 ## Installation
+
+pycmdcheck needs Python 3.11 or later.
 
 ```bash
 pip install pycmdcheck
 ```
 
-Or with uv:
+With uv, add it as a development dependency.
 
 ```bash
-uv add pycmdcheck
+uv add --dev pycmdcheck
 ```
+
+Extras such as `pycmdcheck[linting]` install a tool that a check runs.
+[Getting Started](getting-started.qmd#optional-dependencies) lists them.
 
 ## Next Steps
 
-- [Getting Started](getting-started.qmd) - Installation and first steps
-- [CLI Reference](cli.qmd) - Command-line usage
-- [Configuration](configuration.qmd) - Configure checks in pyproject.toml
-- [Custom Checks](custom-checks.qmd) - Create your own checks
-- [API Reference](reference/index.qmd) - Full API documentation
+- [Getting Started](getting-started.qmd) for installation and a first run
+- [Command-Line Reference](cli.qmd) for every option and the exit codes
+- [Configuration](configuration.qmd) for the settings in `pyproject.toml`
+- [Rule Codes](rules.qmd) for the codes and skip reasons a program can read
+- [Checking Untrusted Code](triage.qmd) for reviewing a repository you did not write
+- [With an AI Assistant](assistants.qmd) for the skill that has an assistant check and fix a package
+- [Custom Checks](custom-checks.qmd) for writing your own checks
+- [API Reference](reference/index.qmd) for the Python API

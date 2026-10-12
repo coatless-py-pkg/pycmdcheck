@@ -1,5 +1,5 @@
 ---
-title: CLI Reference
+title: Command-Line Reference
 ---
 
 ## Basic Usage
@@ -8,257 +8,1059 @@ title: CLI Reference
 pycmdcheck [OPTIONS] [PATH]
 ```
 
-**PATH**: Directory to check (defaults to current directory)
+`PATH` is the directory to check. It defaults to the current directory, and it
+must be a directory.
 
-## Options
+## What a Run Executes
 
-### `-c, --check`
+With no `--check` (or `-c` for short), no `--profile` and no `--config`,
+pycmdcheck runs every check that is installed and enabled. That is all 20
+built-in checks, plus any [custom checks](custom-checks.qmd) installed in the
+same environment. The deprecated [`imports`](#imports-check) check is left
+out.
 
-Run only specific check(s). Can be specified multiple times.
+Such a run executes code from the project. It runs the test suite and the
+doctests, builds the package, and requests each project URL over the network.
+It also starts the linter, the type checker and the formatter that the project
+has configured. A project that has configured none gets a skipped result for
+that check, as [Configuration](configuration.qmd#tool-auto) explains. Make
+such a run from the project's own environment, with the package and its tools
+installed. [Getting Started](getting-started.qmd#tools-the-checks-need) lists
+the tools.
 
-```bash
-# Run only metadata check
-pycmdcheck -c metadata
-
-# Run metadata and tests checks
-pycmdcheck -c metadata -c tests
-```
-
-### `-s, --skip`
-
-Skip specific check(s). Can be specified multiple times.
-
-```bash
-# Skip typing check
-pycmdcheck -s typing
-
-# Skip typing and linting
-pycmdcheck -s typing -s linting
-```
-
-### `--fail-on`
-
-Exit with non-zero code on specified statuses. Can be specified multiple times. Default: `error`
+To read files only, name a profile that does so.
 
 ```bash
-# Fail on errors only (default)
-pycmdcheck --fail-on error
-
-# Fail on errors and warnings
-pycmdcheck --fail-on error --fail-on warning
-
-# Fail on any issue including notes
-pycmdcheck --fail-on error --fail-on warning --fail-on note
-```
-
-### `--exit-zero`
-
-Always exit `0` regardless of check results — report status only via the output
-(or `--json`). The exit code then reflects whether pycmdcheck *ran*, not what it
-*found*: `0` means it ran successfully, and a non-zero code means pycmdcheck
-itself could not run (e.g. a usage error). This is the recommended mode for CI
-that parses the results itself and should only treat tool failures as job
-failures.
-
-```bash
-pycmdcheck --json --exit-zero --profile triage
-```
-
-### `--profile`
-
-Run a predefined set of checks. Available profiles:
-
-| Profile | Checks |
-|---------|--------|
-| `minimal` | metadata, structure, license |
-| `triage` | static checks only — no install, external tools, or network (for CI triage of arbitrary repos) |
-| `default` | the original core checks |
-| `pyopensci` | all checks, with stricter docs settings |
-| `strict` | all checks at maximum strictness |
-
-```bash
-# pyOpenSci onboarding checks
-pycmdcheck --profile pyopensci
-
-# Static-only triage (safe on an un-installed repo)
 pycmdcheck --profile triage
 ```
 
-A profile can be combined with `--skip` to exclude specific checks.
+## Options
 
-### `--list-profiles`
+| Option | Default | What it does |
+|--------|---------|--------------|
+| `-c, --check NAME` | not set | Run only the named checks. Separate the names with commas or repeat the option. See [Selecting Checks](#selecting-checks). |
+| `-s, --skip NAME` | not set | Skip the named checks. Separate the names with commas or repeat the option. See [Selecting Checks](#selecting-checks). |
+| `--profile NAME` | not set | Use a named set of checks. See [Profiles](#profiles). |
+| `--config FILE` | not set | Take the profile, the checks and their options from `FILE`, a settings file kept outside the directory that is checked. See [`--config`](#config-file). |
+| `--fail-on STATUS` | the `fail_on` of the `--config` file when one is given, else the `fail_on` list in `pyproject.toml`, or `error` | Exit with code 1 when a check returns this status or a more severe one. See [`--fail-on`](#fail-on). |
+| `--exit-zero` | off | Exit with code 0 whatever the checks find. |
+| `-x, --fail-fast` | off | Start no further check after the first error. |
+| `--no-parallel` | off | Run one check at a time. |
+| `-v, --verbose` | off | Add a Time column, and show the detail lines of each check and a suggestion for each finding. See [Text Output](#text-output). |
+| `--format FORMAT` | `text` | Print the report as `text`, `json` or `markdown`. See [Output](#output). |
+| `--json` | off | Print the report as JSON. The same as `--format json`. |
+| `--output FILE` | standard output | Write the report or listing to `FILE` and print nothing on standard output. See [`--output`](#output-file). |
+| `--list` | | List the installed checks and exit. |
+| `--list-profiles` | | List the profiles, with their checks and the options they set, and exit. |
+| `--list-rules` | | List the rules of every installed check, with their codes and a suggestion for each, and exit. See [`--list-rules`](#list-rules). |
+| `--install-skill [DIR]` | `.claude/skills` for `DIR` | Copy the skill for AI assistants that this version carries to `DIR/pycmdcheck` and exit. See [`--install-skill`](#install-skill). |
+| `--debug` | off | Print debug logging on standard error. |
+| `--version` | | Print the version and exit. |
+| `-h, --help` | | Print the help text and exit. |
 
-List the available profiles and exit.
+### Selecting Checks
+
+`--check` runs only the checks you name, in the order you name them. `--skip`,
+or `-s` for short, removes checks from whatever would otherwise run. Each
+takes one name, or several names separated by commas with no space after a
+comma.
 
 ```bash
-pycmdcheck --list-profiles
+# Two checks only
+pycmdcheck --check metadata,license
+
+# A profile without two of its checks
+pycmdcheck --profile triage --skip citation,community
 ```
 
-### `--list`
+Each option can also be repeated, and the two forms can be mixed.
+`--check tests,linting --check formatting` selects the same three checks as
+`--check tests,linting,formatting`. A name that is given twice counts once.
 
-List all available checks and exit.
+An unknown name given to `--check` or to `--skip` is a usage error with exit
+code 2, and no check runs. A misspelled name after `--skip` would otherwise
+leave in the check it was meant to take out. This is the last line that
+`pycmdcheck --profile triage --skip licence` writes to standard error.
+
+```
+Error: Unknown check(s) given to --skip: licence. Available checks: build, changelog, ci, citation, community, dependencies, docs, doctests, formatting, imports, license, linting, metadata, py_typed, python_versions, structure, test_suite, tests, typing, urls, version
+```
+
+A value that holds no name is a usage error of the same kind. That is an
+empty value, or one made of commas and spaces only. `pycmdcheck --check ""`
+ends with this line.
+
+```
+Error: --check needs at least one check name.
+```
+
+A value with an empty name beside others, such as `license,`, is a usage
+error too. The usual cause is a space after a comma. The shell splits
+`--check license, docs` into the value `license,` and the word `docs`, and
+pycmdcheck takes `docs` as `PATH`, the directory to check. In a project that
+has a `docs` directory, the command ends with this line.
+
+```
+Error: --check has an empty name in "license,". Write the names with commas and no spaces, as in tests,linting.
+```
+
+In a project that has no such directory, the last line is about `PATH` and
+does not name the option.
+
+```
+Error: Invalid value for '[PATH]': Directory 'docs' does not exist.
+```
+
+Quotes keep the value in one piece, and the spaces around a name are then
+ignored. So `--check "metadata, license"` works. With `--skip`, the line for
+a value that holds no name and the line for an empty name start with
+`Error: --skip`.
+
+A `--skip` that takes out every check the run would hold is a usage error
+too. Those are the checks named with `--check`, or else the checks of the
+profile, or else every installed check that is not deprecated and that the
+project has not turned off in `[tool.pycmdcheck.checks]`.
+`pycmdcheck --check docs --skip docs` ends with this line.
+
+```
+Error: --skip leaves no check to run.
+```
+
+A project that sets every check to `false` leaves nothing for `--skip` to
+take out. A run with no `--check` and no profile then prints a report with
+no results and the line `No checks were run.`, and the exit code is 0, with
+or without `--skip`.
+
+Two cases are more lenient. A run that only prints a listing, with `--list`,
+`--list-profiles` or `--list-rules`, does not look at the values given to
+`--check` and `--skip`. Neither an unknown name nor an empty one is an error
+there. In Python, `check()` and `run_checks()` ignore an unknown name in
+`skip` and log a warning, and a `skip` list that leaves no check gives an
+empty report.
+
+Which way to choose the checks depends on what you need.
+
+| Need | Use | Example |
+|-------------|-------------|----------------|
+| A few checks, once | `--check` | `pycmdcheck --check metadata,license` |
+| A built-in set of checks | [`--profile`](#profiles) | `pycmdcheck --profile triage` |
+| A built-in set without some of its checks | `--profile` with `--skip` | `pycmdcheck --profile triage --skip citation,community` |
+| The same set on every run, kept in a file outside the project | [`--config`](#config-file) | `pycmdcheck --config triage.toml path/to/repo` |
+| Settings for your own package | The `[tool.pycmdcheck]` table in its `pyproject.toml`, which [Configuration](configuration.qmd) describes | `pycmdcheck` |
+
+### Profiles
+
+A profile is a named set of checks. Some profiles also set check options.
+
+| Profile | Checks | Options it sets |
+|---------|--------|-----------------|
+| `minimal` | `license`, `metadata`, `structure` | none |
+| `triage` | The 12 checks that only read files, which are `changelog`, `ci`, `citation`, `community`, `docs`, `license`, `metadata`, `py_typed`, `python_versions`, `structure`, `test_suite` and `version` | `docs` gets `require_readme = true`, `check_readme_sections = true`, `check_docs_site = true`, `check_docstrings = false` and `min_docstring_coverage = 0` |
+| `core` | 13 checks, which are `build`, `dependencies`, `docs`, `formatting`, `license`, `linting`, `metadata`, `py_typed`, `structure`, `test_suite`, `tests`, `typing` and `version` | none |
+| `default` | The same 13 checks. This is the old name of `core`. | none |
+| `pyopensci` | All 20 built-in checks | `docs` gets `require_readme = true`, `check_docstrings = true`, `check_readme_sections = true`, `check_docs_site = true` and `min_docstring_coverage = 50` |
+| `strict` | All 20 built-in checks | `docs` gets `require_readme = true`, `check_docstrings = true`, `check_readme_sections = true`, `check_docs_site = true` and `min_docstring_coverage = 80`. `linting` gets `tool = "ruff"`. `typing` gets `tool = "mypy"` and `strict = true`. |
+
+You cannot define a named profile of your own, because a name that is not
+built in would have to be looked up in the repository being checked. A
+[`--config`](#config-file) file is the place for a selection of your own.
+
+The name `default` is deprecated. It still works, and every run that uses it
+prints this warning on standard error.
+
+```
+The profile name 'default' is deprecated. Use 'core' instead.
+```
+
+The `core` profile is not what runs when no profile is given. A run with no
+profile executes every enabled check, as described under
+[What a Run Executes](#what-a-run-executes).
+
+Only `minimal` and `triage` are limited to reading files. The `core`,
+`pyopensci` and `strict` profiles include checks that execute the project's
+code and need its tools installed.
+
+The `strict` profile names its tools. It lints with ruff and type checks with
+`mypy --strict` on every project, also on one that has configured neither
+tool or has chosen another one in `pyproject.toml`. Under every other profile
+the `linting` and `typing` checks run the tool the project has configured and
+are skipped when it has configured none. The `formatting` check works that
+way under every profile, `strict` included.
+
+The `triage` profile sets all five options of the `docs` check, and `docs`
+is the only one of its 12 checks that has options. The `[tool.pycmdcheck]`
+table of a checked project can therefore change no result of a triage run.
+[Checking Untrusted Code](triage.qmd#what-the-profile-runs-and-leaves-out)
+says what that table can still reach.
+
+`pycmdcheck --list-profiles` prints the profiles of the installed version.
+Each profile has a row for its checks, which starts with `Runs`, and a row
+for each option it sets, which starts with `Sets`. These are the first lines
+of the output at a width of 72 columns. The other four profiles follow in
+the same form.
+
+```
+                           Available Profiles
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Name      ┃ Description, checks and options                          ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ minimal   │ Quick basic checks (metadata, structure, license)        │
+│           │ Runs license, metadata, structure                        │
+├───────────┼──────────────────────────────────────────────────────────┤
+│ triage    │ Static checks that only read files. No install, external │
+│           │ tools, or network (for CI triage of arbitrary            │
+│           │ repositories)                                            │
+│           │ Runs changelog, ci, citation, community, docs, license,  │
+│           │ metadata, py_typed, python_versions, structure,          │
+│           │ test_suite, version                                      │
+│           │ Sets docs.require_readme = true                          │
+│           │ Sets docs.check_readme_sections = true                   │
+│           │ Sets docs.check_docs_site = true                         │
+│           │ Sets docs.check_docstrings = false                       │
+│           │ Sets docs.min_docstring_coverage = 0                     │
+```
+
+With `--json` the listing is a JSON array with one object for each profile.
+An object has the four keys `name`, `description`, `checks` and `options`.
+This is the first of the six objects.
+
+```json
+{
+  "name": "minimal",
+  "description": "Quick basic checks (metadata, structure, license)",
+  "checks": [
+    "license",
+    "metadata",
+    "structure"
+  ],
+  "options": {}
+}
+```
+
+`options` has one entry for each check whose options the profile sets, and
+it is empty for a profile that sets none. This is the key in the object for
+`triage`.
+
+```json
+"options": {
+  "docs": {
+    "require_readme": true,
+    "check_readme_sections": true,
+    "check_docs_site": true,
+    "check_docstrings": false,
+    "min_docstring_coverage": 0
+  }
+}
+```
+
+In Python, `pycmdcheck.profiles.get_profile("triage")` returns the profile.
+Its attributes `checks` and `config_overrides` hold the check names and the
+options. `list_profiles()` in the same module returns only the name and the
+description of each profile.
+
+### `--config` {#config-file}
+
+`--config FILE` takes the profile, the checks and their options from `FILE`,
+a settings file that you keep outside the directory that is checked. With
+this option the `[tool.pycmdcheck]` table of the checked directory is not
+read at all. The option is new in version 0.2.0.
+
+The option is for checking repositories you do not own, as a review bot does,
+or an organization that holds all its packages to one standard. You cannot
+put settings into those repositories, and their own settings should not
+change your run.
+
+For most such needs a built-in profile trimmed on the command line is enough.
+
+```bash
+pycmdcheck --profile triage --skip citation --fail-on error path/to/repo
+```
+
+A settings file is worth having when that line grows, or when an option of a
+check has to be set from outside the repository. The file is written in TOML
+(Tom's Obvious Minimal Language), the format of `pyproject.toml`. This one
+runs the `triage` profile without `citation` and makes the run fail on
+warnings as well as on errors.
+
+```toml
+# .github/pycmdcheck-triage.toml, in the bot's own repository
+profile = "triage"
+fail_on = "warning"
+
+[checks]
+citation = false
+```
+
+```bash
+pycmdcheck --config .github/pycmdcheck-triage.toml path/to/repo
+```
+
+These are the first lines of the report for the small package from
+[Getting Started](getting-started.qmd#your-first-check). The first line names
+the file beside the profile, without its directory, and the table has no
+`citation` row. The path is shortened here.
+
+```
+Checking package: .../riverplot (profile: triage, config: pycmdcheck-triage.toml)
+
+┏━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃     ┃ Check           ┃ Message                                     ┃
+┡━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│  ✓  │ changelog       │ Changelog present                           │
+│  ℹ  │ ci              │ No CI configuration found                   │
+│  ℹ  │ community       │ 2 community file(s) not found in repository │
+```
+
+The Markdown report names the file in the same way, and the JSON report
+gives the path in its `config_file` key.
+
+The file follows four rules.
+[Configuration](configuration.qmd#config-file) is the reference for its
+keys, for the options it may set and for its error messages.
+
+- `profile` names one built-in profile. The key is required.
+- Under `[checks]` the file can take a check out of the profile and set
+  options for a check that is in it. It cannot add a check.
+- `fail_on` is the threshold of the run, as [`--fail-on`](#fail-on) is. The
+  default is `error`.
+- The options are checked strictly. An unknown option, a value of the wrong
+  type and a value out of range are each an error.
+
+pycmdcheck does not test where the file is kept. Keep it where the checked
+repository cannot change it.
+
+The other options work next to `--config` as follows.
+
+| Option | With `--config` |
+|--------|-----------------|
+| `--profile` | A usage error. The file names the profile. |
+| `--check NAME` | Narrows the run to the named checks. Each has to be a check the file runs. A check outside the profile is a usage error, and so is one the file took out. |
+| `--skip NAME` | Takes more checks out. When no check is left, that is a usage error, as it is [without `--config`](#selecting-checks). |
+| `--fail-on` | Wins over the `fail_on` of the file |
+| `--exit-zero` | Keeps the exit code at 0 whatever the checks find, as in every run |
+
+Each usage error in this table writes a last line of its own to standard
+error. These three come from runs with the file above. The first run added
+`--profile triage`, the second `--check tests`, and the third
+`--check license --skip license`.
+
+```
+Error: --config cannot be used with --profile. The config file names the profile.
+Error: Check(s) not run by the config file: tests. It runs changelog, ci, community, docs, license, metadata, py_typed, python_versions, structure, test_suite, version
+Error: --skip leaves no check to run.
+```
+
+A mistake in the file is a usage error with exit code 2. It is found before
+any check runs. Nothing is written to standard output or to the `--output`
+file, and `--exit-zero` does not change the code. The last line on standard
+error names the file as it was given and says what is wrong. Each of these
+three lines comes from a run of its own. The mistakes are a check that is
+not in the profile, an option value of the wrong type, and a misspelled
+check name.
+
+```
+Error: Config file .github/pycmdcheck-triage.toml: tests is not in the profile triage. A config file can take a check out of a profile and cannot add one.
+Error: Config file .github/pycmdcheck-triage.toml: docs.check_docstrings must be true or false, but it is "no".
+Error: Config file .github/pycmdcheck-triage.toml: Unknown check citaton in [checks]. The profile triage holds changelog, ci, citation, community, docs, license, metadata, py_typed, python_versions, structure, test_suite, version.
+```
+
+The file is read before a listing is printed as well. So
+`pycmdcheck --config FILE --list` tests a file with no repository at hand.
+When the file is sound, it prints the usual list of every installed check,
+not the checks the file selects. When it is not, it prints the error line.
+`--list-profiles` and `--list-rules` read the file in the same way.
+
+### The Deprecated imports Check {#imports-check}
+
+Version 0.2.0 merged the `imports` check into `dependencies`, which reports
+undeclared imports from the same scan. The name `imports` stays registered
+for one release, so `--list` still shows it. It is in no profile, and a run
+with no `--check` leaves it out. It runs only when `--check` names it, and
+then it is always skipped. Because the name is registered, `--skip imports`
+is accepted as well and is not an unknown name. Take `imports` out of
+`--skip` now all the same. Once the name is removed, `--skip imports` is a
+usage error with exit code 2.
+
+```
+│  ○  │ imports │ Merged into the dependencies check │
+```
+
+A project whose `[tool.pycmdcheck.checks]` table still enables `imports`,
+with `imports = true` or with a table of its own, gets this warning on
+standard error in a run with no `--check` and no profile. Delete the entry to
+make it go away.
+
+```
+The deprecated check(s) enabled in [tool.pycmdcheck.checks] were left out: imports
+```
+
+### Precedence
+
+The command line, the profile and `pyproject.toml` can each say which checks
+run. They are applied in this order.
+
+1. `--check` decides. The profile's check set and the enable flags in
+   `pyproject.toml` are then not consulted.
+2. Without `--check`, the profile's check set decides. The enable flags in
+   `pyproject.toml` are not consulted, so `license = false` does not take
+   `license` out of a profile.
+3. With neither, every installed check runs unless `pyproject.toml` sets it to
+   `false`. The deprecated `imports` check is the exception. It stays out
+   whatever `pyproject.toml` says.
+4. `--skip` then removes checks from the set that was chosen.
+
+Check options follow one rule. An option set by the profile wins over the same
+option in `pyproject.toml`, and every other option keeps its `pyproject.toml`
+value. This holds when `--check` narrows the run as well. The profile then
+supplies only its options, and the first line of the report ends with
+`(options from profile: NAME)`.
+
+Custom checks are outside every profile. A profile lists built-in checks only,
+so a custom check runs in a run with no profile, or when `--check` names it.
+
+This order is what makes a profile usable on a repository you did not write.
+Its `pyproject.toml` cannot switch a check off or relax an option the profile
+sets. It can still set [`fail_on`](configuration.qmd#fail_on), which counts
+when `--fail-on` is not given, and any option the profile leaves alone.
+
+A run with [`--config`](#config-file) has one more source, the settings
+file, and loses one. The `[tool.pycmdcheck]` table of the checked directory
+is not read, so that table has no say in what follows.
+
+1. The file decides which checks can run. They are the checks of its profile
+   without the ones the file takes out.
+2. `--check` narrows the run to checks from that set. It cannot bring in a
+   check from outside it, so a custom check never runs here.
+3. `--skip` then removes checks.
+
+The options of such a run are put together in three steps, and a later step
+wins. First come the built-in defaults, then the options of the profile,
+then the options of the file. The threshold comes from `--fail-on`, else
+from the `fail_on` of the file, and is `error` when neither is given. When
+`--check` narrows the run, the first line of the report ends with
+`(options from profile: NAME, config: FILE)`.
+
+### `--fail-on` {#fail-on}
+
+The choices are `error`, `warning` and `note`. The option names a threshold.
+The run exits with code 1 when a check returns that status or a more severe
+one.
+
+| Option | Statuses that fail the run |
+|--------|----------------------------|
+| `--fail-on error` | error |
+| `--fail-on warning` | warning and error |
+| `--fail-on note` | note, warning and error |
+
+When the option is repeated, the least severe status counts. When it is not
+given, pycmdcheck reads the [`fail_on`](configuration.qmd#fail_on) list from
+`pyproject.toml` in the same way. A run with [`--config`](#config-file)
+reads the `fail_on` of the settings file in its place. Without either
+setting, only an error makes the run fail. A skipped check never fails the
+run.
+
+```bash
+pycmdcheck --check license --fail-on warning
+```
+
+On a package with no license file, that run ends with these lines and exit
+code 1. Without the option the closing line is `No errors (1 warning).` and
+the exit code is 0. [Text Output](#text-output) explains the line that
+follows the closing line.
+
+```
+│  ⚠  │ license │ No license file found │
+└─────┴─────────┴───────────────────────┘
+
+1 warning
+
+Failed: 1 warning.
+Run again with --verbose to see a suggestion for each finding.
+```
+
+### `--exit-zero` {#exit-zero}
+
+With this option the exit code says whether pycmdcheck ran, not what it found.
+Findings never produce exit code 1. Codes 2 and 3 are still used. It suits a
+caller that reads the report itself, such as a continuous integration job that
+parses the JSON.
+
+```bash
+pycmdcheck --profile triage --json --exit-zero > report.json
+```
+
+### `--fail-fast` {#fail-fast}
+
+With `--fail-fast`, or `-x` for short, no check starts after the first one
+that returns an error. Checks that are already running finish and keep their
+results. Every check that was not started is reported as skipped with the
+message `Not run (fail-fast)` and the skip reason `fail-fast`, so the report
+still lists every selected check. Only an error triggers this, whatever
+`--fail-on` says.
+
+These are the last lines of a report from
+`pycmdcheck --profile triage --fail-fast --no-parallel`, for a package whose
+`pyproject.toml` does not parse.
+
+```
+│  ✓  │ license         │ License file present                        │
+│  ✗  │ metadata        │ Invalid pyproject.toml                      │
+│  ○  │ py_typed        │ Not run (fail-fast)                         │
+│  ○  │ python_versions │ Not run (fail-fast)                         │
+│  ○  │ structure       │ Not run (fail-fast)                         │
+│  ○  │ test_suite      │ Not run (fail-fast)                         │
+│  ○  │ version         │ Not run (fail-fast)                         │
+└─────┴─────────────────┴─────────────────────────────────────────────┘
+
+3 ok | 3 note | 1 error | 5 skipped
+
+Failed: 1 error.
+Run again with --verbose to see a suggestion for each finding.
+```
+
+### `--no-parallel`
+
+By default up to four checks run at the same time. With this option they run
+one after another. The report lists the results in the same order either way.
+With `--fail-fast`, running one at a time also fixes which checks are skipped.
+
+### `--list` and `--list-profiles`
+
+`--list` prints every installed check with its description, custom checks
+included. It does not show what a given profile or `--check` would select.
+`--list-profiles` prints each profile with its description, its checks and
+the options it sets.
+
+With `--json`, `--list` prints a JSON array of objects that have a `name` and
+a `description`. The objects of `--list-profiles` have those two keys, the
+list `checks` and the object `options`. With `--format markdown` each prints
+the same table as without it. Both honor [`--output`](#output-file) and then
+write the listing to the file.
 
 ```bash
 pycmdcheck --list
+pycmdcheck --list-profiles --json
 ```
 
-Output:
+[Getting Started](getting-started.qmd#built-in-checks) shows the output of
+`--list`, and [Profiles](#profiles) shows that of `--list-profiles`.
+
+### `--list-rules` {#list-rules}
+
+`--list-rules` prints every rule of every installed check, custom checks
+included, and runs no check. A rule has a [code](rules.qmd) and a description
+of what it reports. Every rule that comes with pycmdcheck also has a hint,
+which is one sentence that says what to do about a finding of that rule. A
+rule of a [custom check](custom-checks.qmd#hints) can have none. On the
+terminal and in the Markdown report a hint comes after the label
+`Suggestion:`, so a suggestion and a hint are the same thing.
+
+The text output is a list and not a table. It starts with the line `Rules`.
+Each rule comes after an empty line. Its first line gives the code and, in
+parentheses, the check. The description is next, and the hint follows it
+after `Suggestion:`. Both are indented by two spaces. A long line is wrapped
+between words to the width of the terminal, and the rest of it continues
+four spaces in. A rule with no hint has no `Suggestion:` line. The rules are
+sorted by code. These are the first lines of the output at a width of 80
+columns.
+
 ```
-                           Available Checks
-┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Name            ┃ Description                                 ┃
-┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ build           │ Verify package builds successfully          │
-│ changelog       │ Check for changelog or news file            │
-│ ci              │ Check for CI configuration                  │
-│ citation        │ Check for citation file                     │
-│ community       │ Check for community health files            │
-│ dependencies    │ Audit declared vs. actual dependencies      │
-│ docs            │ Check documentation (README, docstrings)    │
-│ doctests        │ Run doctests in package modules             │
-│ formatting      │ Check code formatting (ruff format/black)   │
-│ imports         │ Validate package imports                    │
-│ license         │ Check for license file                      │
-│ linting         │ Run code linting (ruff/flake8/pylint)       │
-│ metadata        │ Validate package metadata (pyproject.toml)  │
-│ py_typed        │ Check for PEP 561 py.typed marker           │
-│ python_versions │ Check Python version support (EOL versions) │
-│ structure       │ Validate package directory structure        │
-│ tests           │ Run package tests (pytest/unittest)         │
-│ typing          │ Run type checking (mypy/pyright)            │
-│ urls            │ Validate project URLs are reachable         │
-│ version         │ Verify version consistency                  │
-└─────────────────┴─────────────────────────────────────────────┘
+Rules
+
+build.could-not-run (build)
+  The build module is installed but could not run
+  Suggestion: Run python -m build with the same args in the project directory
+    and fix the error it prints.
+
+build.failed (build)
+  The package does not build
+  Suggestion: Run python -m build in the project directory and fix the first
+    error it prints.
+
+build.invalid-args (build)
+  The args option is not a list of strings
+  Suggestion: Write args as a list with one string for each argument, so
+    "--wheel --sdist" becomes ["--wheel", "--sdist"].
 ```
 
-### `-v, --verbose`
-
-Show detailed output including timing and details for each check.
+With `--json` the listing is a JSON array of objects that have the four keys
+`check`, `code`, `description` and `hint`. `hint` is `null` for a rule that
+has none. The option honors [`--output`](#output-file) as well.
 
 ```bash
-pycmdcheck -v
+pycmdcheck --list-rules --json
 ```
 
-### `--json`
+These are the first two of the objects.
 
-Output results as JSON for programmatic consumption.
+```json
+[
+  {
+    "check": "build",
+    "code": "build.could-not-run",
+    "description": "The build module is installed but could not run",
+    "hint": "Run python -m build with the same args in the project directory and fix the error it prints."
+  },
+  {
+    "check": "build",
+    "code": "build.failed",
+    "description": "The package does not build",
+    "hint": "Run python -m build in the project directory and fix the first error it prints."
+  }
+]
+```
+
+The four rules of pycmdcheck itself are listed under the check name
+`pycmdcheck`. The listing does not say which status a rule carries.
+[Rule Codes](rules.qmd#rules-of-each-check) has that for the built-in checks.
+
+A report can give a more exact hint than the listing gives for the same code.
+A check writes the hint of a finding itself when the advice depends on what
+it found. The listing gives `py_typed.missing` the hint
+`Add an empty file named py.typed to the package directory.` A report names
+the directory, as in `Add an empty file named py.typed to src/riverplot.`
+
+### `--install-skill` {#install-skill}
+
+`--install-skill` copies the skill that this version of pycmdcheck carries
+into a skills directory and exits. The skill is a file of instructions for
+an AI assistant, and [With an AI Assistant](assistants.qmd) says what it
+does. The option is new in version 0.2.0 and has no short form.
 
 ```bash
-pycmdcheck --json
+pycmdcheck --install-skill
 ```
 
-Example output:
+```
+Installed the skill in .claude/skills/pycmdcheck/SKILL.md.
+```
+
+The skill goes to `DIR/pycmdcheck/SKILL.md`. Without `DIR` the skills
+directory is `.claude/skills` in the current directory. Missing directories
+are made, and other files in the folder are left alone. A second run writes
+nothing and prints
+`The skill in .claude/skills/pycmdcheck/SKILL.md is already up to date.` A
+copy that differs is replaced without a question, and the line then starts
+with `Updated`. That keeps the copy in step with the installed version, and
+an edit made by hand is lost.
+
+The last part of `DIR` must be named `skills`, as in `~/.claude/skills` or
+`.agents/skills`. Any other name is a usage error with exit code 2, and
+nothing is written. The option takes the next word as `DIR`, so without this
+rule `pycmdcheck --install-skill mypackage` would write a folder into the
+package it was meant to check. The command ends with this line.
+
+```
+Error: --install-skill read "mypackage" as its directory. The directory must be named skills, as in .claude/skills.
+```
+
+A write that fails is a usage error with exit code 2. So is a symbolic link
+at `DIR/pycmdcheck` or at the `SKILL.md` in it, and then nothing is written.
+
+```
+Error: Nothing was written because .claude/skills/pycmdcheck is a symbolic link, so remove the link or pick another directory.
+```
+
+The option runs no check and reads no settings.
+
+## Output
+
+`--format` chooses the form of the report.
+
+| Format | What it prints |
+|--------|----------------|
+| `text` | A table for the terminal. This is the default. |
+| `json` | One JSON object for another program to read. `--json` means the same. |
+| `markdown` | A report to post as a comment on a pull request or an issue |
+
+`--json` together with `--format text` or `--format markdown` is a usage
+error.
+
+The report goes to standard output, or to the file that
+[`--output`](#output-file) names. Warnings, such as a note that
+`pyproject.toml` could not be read, go to standard error, and so do usage
+errors and debug logging. Standard output therefore holds nothing but the
+report, and with `--json` it can be redirected to a file and parsed. The text
+report begins before the checks run, with a line that names the directory.
+JSON and Markdown are printed in one piece when the run is over.
+
+### Text Output {#text-output}
+
+After its first line, the text report has a table with one row for each
+check, a line with the counts, and a closing line. The closing line follows
+the same rule as the exit code, and it reads the same with `--exit-zero`. The
+table below gives its three forms, and the first row that applies is used.
+
+| Closing line | When |
+|--------------|------|
+| `Failed: 1 error, 4 notes.` | A check returned the `--fail-on` status or a more severe one. The causes are listed from most to least severe. |
+| `No errors (1 warning, 2 skipped).` | There are warnings, or checks that could not look, for example because a tool or a prerequisite is missing |
+| `All checks passed!` | Every result is ok or a note. A check skipped because the project gave it nothing to look at does not count against this line |
+
+The table of checks does not show the [hints](#list-rules), which say what to
+do about each finding. When at least one finding has a hint, one more line
+follows the closing line, and it points to `--verbose`, or `-v` for short.
+These are the last lines of `pycmdcheck --check license,py_typed` on the
+small package from [Getting Started](getting-started.qmd#your-first-check).
+
+```
+│  ✓  │ license  │ License file present                      │
+│  ℹ  │ py_typed │ Missing py.typed marker for typed package │
+└─────┴──────────┴───────────────────────────────────────────┘
+
+1 ok | 1 note
+
+All checks passed!
+Run again with --verbose to see a suggestion for each finding.
+```
+
+`--verbose` adds a Time column to the table, with the seconds each check
+took. Below the table it prints a block for each check that has detail lines
+or hints. The block starts with the name of the check, as in
+`py_typed details:`. The detail lines come first. They say what the check
+looked for and what it found. One `Suggestion:` line follows for each hint,
+and findings that have the same hint share a line. Each line of a block is
+indented by two spaces. A line that is too long for the terminal is wrapped
+between words, and the rest of it continues four spaces in, as the listing
+of [`--list-rules`](#list-rules) shows. A detail line that has an indent of
+its own keeps it, and the rest of such a line goes two spaces further in.
+The line that points to `--verbose` is left out. This is the same run with
+`--verbose`, from the table on.
+
+```
+┏━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓
+┃     ┃ Check    ┃ Message                                   ┃  Time ┃
+┡━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩
+│  ✓  │ license  │ License file present                      │ 0.00s │
+│  ℹ  │ py_typed │ Missing py.typed marker for typed package │ 0.00s │
+└─────┴──────────┴───────────────────────────────────────────┴───────┘
+
+license details:
+  Found license file: LICENSE
+  License type: MIT
+  License is OSI-approved (MIT)
+
+py_typed details:
+  Package directory: src/riverplot
+  Scanned 2 of 2 files: 2 of 2 public functions are annotated
+  Suggestion: Add an empty file named py.typed to src/riverplot.
+
+1 ok | 1 note
+
+All checks passed!
+```
+
+A check whose result is ok has no finding and so no hint, as `license` shows.
+The same holds for a skipped check. Its detail lines can still say what would
+let the check run, such as which tool to install.
+
+The JSON and Markdown reports always hold the hints, so neither has a line
+that points to `--verbose`.
+
+### `--output` {#output-file}
+
+`--output FILE` writes the report to `FILE` as UTF-8, in the format that
+`--format` chose, and prints nothing on standard output. An existing file is
+replaced. Warnings still go to standard error.
+
+```bash
+pycmdcheck --profile triage --format markdown --output report.md
+```
+
+The file name is tested before any check runs. An empty name, a name that is
+a directory, and a file in a directory that does not exist are each a usage
+error with exit code 2. `--output -` means standard output. The option also
+applies to `--list`, `--list-profiles` and `--list-rules`.
+
+### JSON Output
+
+`--json` prints one JSON object with twelve keys.
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `package_path` | string | Absolute path of the directory that was checked |
+| `passed` | boolean | `true` when no check returned `error`. It does not look at `--fail-on`. |
+| `summary` | object | Number of results for each of `ok`, `note`, `warning`, `error` and `skipped` |
+| `results` | array | One object for each check, in the order the terminal table uses |
+| `schema_version` | integer | Version of this layout. It is `1`. |
+| `pycmdcheck_version` | string | Version of pycmdcheck that wrote the report |
+| `profile` | string or `null` | The name given to `--profile`, or the profile that the `--config` file names. `null` when neither option was given. |
+| `config_file` | string or `null` | The file given to `--config`, as it was written on the command line, or `null` when none was given |
+| `fail_on` | array of strings | The statuses that fail the run once the threshold rule is applied, most severe first |
+| `failed` | boolean | `true` when a check returned one of the statuses in `fail_on`. This is the rule for exit code 1, and `--exit-zero` does not change the value. |
+| `requested_checks` | array of strings or `null` | The names given with `--check`, one in each string, or `null` when there were none |
+| `skipped_checks` | array of strings | The names given with `--skip`, one in each string. Empty when there were none. |
+
+The last eight keys are new in version 0.2.0. `passed` and `failed` answer
+different questions. With `--fail-on warning`, a report with one warning and
+no error has `passed` and `failed` both set to `true`.
+
+A check that a `--config` file took out is named nowhere in the report. It
+is absent from `results`, and `skipped_checks` holds only the names given
+with `--skip`.
+
+Each entry of `results` has seven keys. The last two are new in version
+0.2.0.
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `name` | string | The check name, as shown by `--list` |
+| `status` | string | One of `ok`, `note`, `warning`, `error`, `skipped` |
+| `message` | string | One line that says what the check concluded |
+| `details` | array of strings | What the check looked for and what it found. A skipped result may also say here what would let the check run. |
+| `duration` | number | Seconds the check took |
+| `findings` | array of objects | What the check found, in a form a program can read. Empty when the status is `ok` or `skipped`. |
+| `skip_reason` | string or `null` | Why a skipped check did not look at anything. `null` for every other status. |
+
+Each entry of `findings` has four keys.
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `code` | string | The rule the finding comes from, such as `community.missing-contributing` |
+| `status` | string | One of `note`, `warning`, `error` |
+| `message` | string | One line that says what was found |
+| `hint` | string or `null` | One sentence that says what to do about the finding, or `null` when the check gives none. Every finding of a built-in check has one. |
+
+The status of a result is that of its most severe finding. The `message` of a
+result and of a finding, the `details` and the `hint` are written for people
+and their wording can change. The codes and the skip reasons are stable, and
+[Rule Codes](rules.qmd) lists them all.
+
+This is the output of `pycmdcheck --profile triage --json --exit-zero` on a
+small package. The path is shortened, and 10 of the 12 results are left out.
+
 ```json
 {
-  "package_path": "/path/to/package",
+  "package_path": ".../riverplot",
   "passed": true,
   "summary": {
-    "ok": 18,
-    "note": 2,
+    "ok": 7,
+    "note": 5,
     "warning": 0,
     "error": 0,
     "skipped": 0
   },
   "results": [
     {
-      "name": "metadata",
+      "name": "changelog",
       "status": "ok",
-      "message": "Package metadata is valid",
-      "details": ["All metadata fields present"],
-      "duration": 0.001
+      "message": "Changelog present",
+      "details": [
+        "Found: CHANGELOG.md"
+      ],
+      "duration": 0.0010368824005126953,
+      "findings": [],
+      "skip_reason": null
+    },
+    {
+      "name": "community",
+      "status": "note",
+      "message": "2 community file(s) not found in repository",
+      "details": [
+        "Not found in repository (root, .github/, docs/, doc/): CONTRIBUTING.md, CODE_OF_CONDUCT.md",
+        "Organization-level default community health files cannot be detected by this check"
+      ],
+      "duration": 0.0018780231475830078,
+      "findings": [
+        {
+          "code": "community.missing-contributing",
+          "status": "note",
+          "message": "CONTRIBUTING.md not found in repository",
+          "hint": "Add a CONTRIBUTING.md file to the project root or .github/ that says how to report problems and send changes."
+        },
+        {
+          "code": "community.missing-code-of-conduct",
+          "status": "note",
+          "message": "CODE_OF_CONDUCT.md not found in repository",
+          "hint": "Add a CODE_OF_CONDUCT.md file to the project root or .github/, with a text such as the Contributor Covenant."
+        }
+      ],
+      "skip_reason": null
     }
-  ]
+  ],
+  "schema_version": 1,
+  "pycmdcheck_version": "0.2.0",
+  "profile": "triage",
+  "config_file": null,
+  "fail_on": [
+    "error"
+  ],
+  "failed": false,
+  "requested_checks": null,
+  "skipped_checks": []
 }
 ```
 
-### `--no-parallel`
+### Markdown Output {#markdown-output}
 
-Run checks sequentially instead of in parallel.
+`--format markdown` prints a report that can be posted as a comment. It has
+five parts.
 
-```bash
-pycmdcheck --no-parallel
+1. A heading.
+2. One line with the name of the directory, the profile and the pycmdcheck
+   version. Only the last part of the path is shown. With `--config` the
+   line also gives the name of the settings file, as in
+   `(profile: triage, config: pycmdcheck-triage.toml)`.
+3. A table with one row for each check.
+4. A line in bold with the counts and the closing line of the text report.
+5. One collapsed block for each result that is not ok and has detail lines
+   or [hints](#text-output). The block is a list. The detail lines come
+   first, and one item that starts with `**Suggestion:**` follows for each
+   hint. With `--verbose`, a result that is ok and has detail lines gets a
+   block as well.
+
+This is the output of `pycmdcheck --profile triage --format markdown` on the
+same small package. Four of the five collapsed blocks are left out.
+
+```markdown
+## pycmdcheck report
+
+Checked riverplot (profile: triage) with pycmdcheck 0.2.0.
+
+| Status | Check | Message |
+| --- | --- | --- |
+| ok | changelog | Changelog present |
+| note | ci | No CI configuration found |
+| note | citation | No citation file found |
+| note | community | 2 community file(s) not found in repository |
+| note | docs | Some documentation improvements suggested |
+| ok | license | License file present |
+| ok | metadata | Package metadata is valid |
+| note | py\_typed | Missing py.typed marker for typed package |
+| ok | python\_versions | Python version requirement is current |
+| ok | structure | Valid src layout structure |
+| ok | test\_suite | Test suite present |
+| ok | version | Version 0.3.0 is consistent |
+
+**7 ok, 5 note. All checks passed!**
+
+<details>
+<summary>community: note</summary>
+
+- Not found in repository (root, .github/, docs/, doc/): CONTRIBUTING.md, CODE\_OF\_CONDUCT.md
+- Organization-level default community health files cannot be detected by this check
+- **Suggestion:** Add a CONTRIBUTING.md file to the project root or .github/ that says how to report problems and send changes.
+- **Suggestion:** Add a CODE\_OF\_CONDUCT.md file to the project root or .github/, with a text such as the Contributor Covenant.
+
+</details>
 ```
 
-### `-x, --fail-fast`
+Messages, detail lines and hints often quote the checked project, and the
+directory name belongs to it. The report therefore treats that text, the
+check names and the name of a `--config` file as text to be shown and not as
+Markdown to be read.
 
-Stop after the first check that returns an ERROR status. This is independent of
-`--fail-on` (which only affects the final exit code) — fail-fast always triggers
-on ERROR.
+- Each piece of text is put on one line.
+- The characters that Markdown reads as markup get a backslash in front. That
+  is why the example shows `py\_typed`. A message cannot break the table,
+  write a Markdown link or image, or start a heading.
+- A zero-width space, which is an invisible character, follows every `@` and
+  the first colon of anything shaped like `:word:`. GitHub then sends no
+  notification to a user or a team and shows no emoji.
+- The same character is placed inside the start of a web address, after
+  `https:` or `www`. GitHub then shows the address as text and not as a link.
+- A detail line that begins like a list item or a horizontal rule gets a
+  backslash, so it stays one line of the list.
 
-```bash
-pycmdcheck -x
-pycmdcheck --fail-fast
+GitHub may still link a few kinds of plain text, such as an issue reference
+written as `GH-1`.
+
+Text copied from the rendered comment can carry the invisible character. A
+location such as `mod.py:100: error` is one example. Use `--json` for
+anything a program reads.
+[Checking Untrusted Code](triage.qmd#posting-a-comment) shows the report in
+use.
+
+### When a Check Is Skipped
+
+A skipped check did not look at anything, so it gave no verdict. Its message
+says why in words, and the `skip_reason` key of the JSON report says it with
+one of nine fixed values. The usual reasons are that a tool is not installed,
+that the project has not configured a tool for the check, that the project
+has nothing for the check to look at, that another check already reports what
+is missing, or that `--fail-fast` stopped the run.
+[Rule Codes](rules.qmd#skip-reasons) lists the values. A skipped check never
+fails the run.
+
+This is `pycmdcheck --check formatting,linting,typing` on a package that has
+configured no formatter, no linter and no type checker.
+
+```
+│  ○  │ formatting │ No formatter configured    │
+│  ○  │ linting    │ No linter configured       │
+│  ○  │ typing     │ No type checker configured │
+└─────┴────────────┴────────────────────────────┘
+
+3 skipped
+
+No errors (3 skipped).
 ```
 
-### `--debug`
-
-Enable debug logging output (useful when diagnosing check behavior).
-
-```bash
-pycmdcheck --debug
-```
-
-### `--version`
-
-Show version and exit.
-
-```bash
-pycmdcheck --version
-```
-
-### `--help`
-
-Show help message and exit.
-
-```bash
-pycmdcheck --help
-```
+In the JSON report each of these three results has the `skip_reason`
+`not-configured`.
 
 ## Exit Codes
 
 | Code | Meaning |
 |------|---------|
-| 0 | All checks passed (no status matching `--fail-on`), or any result with `--exit-zero` |
-| 1 | One or more checks failed (status matched `--fail-on`); suppressed by `--exit-zero` |
-| 2 | Invalid usage (e.g., an unknown check name passed to `-c`/`--check`); **not** suppressed by `--exit-zero` |
+| 0 | No check returned the `--fail-on` status or a more severe one. With `--exit-zero`, any set of results. |
+| 1 | At least one check returned the `--fail-on` status or a more severe one. |
+| 2 | Usage error. Examples are an unknown option, an unknown or empty check name given to `--check` or `--skip`, a mistake in the [`--config`](#config-file) file, a `PATH` that is not a directory, `--json` together with another `--format`, and an `--output` file that cannot be used. The message goes to standard error, nothing is printed on standard output, and no check runs. |
+| 3 | pycmdcheck itself failed. One line goes to standard error. With JSON, Markdown or `--output`, no report is written. With the text report on standard output, the first line, which names the directory being checked, may already be there. |
+
+`--exit-zero` does not change codes 2 and 3.
+
+One usage error comes after the checks have run. When the `--output` file
+passed the test at the start and still cannot be written at the end, for
+example because the disk is full, the exit code is 2 and the report is lost.
+
+## Checking Code You Do Not Trust
+
+The `tests`, `doctests` and `build` checks execute code from the project. The
+`typing` and `linting` checks start tools that can load a plugin or run a
+start-up hook named in the project's own configuration. The `urls` check
+sends requests to the addresses the project lists. It leaves out local and
+private hosts, and it still contacts any public host the project names. A run
+with no profile includes all six, and so do the `pyopensci` and `strict`
+profiles. The `core` profile includes `tests`, `build`, `typing` and
+`linting`.
+
+For a repository you have not reviewed, use `--profile triage`, which runs
+none of these. A [`--config`](#config-file) file that names `triage` runs
+none of them either, and it keeps the repository's own settings out of the
+run. Start it with the `pycmdcheck` command, or with
+`python -P -m pycmdcheck`, and pass the repository as `PATH`. Do not run
+`python -m pycmdcheck` from inside the repository.
+[Checking Untrusted Code](triage.qmd) gives the full command, the reasons, and
+how to read the result.
 
 ## Examples
 
-### CI/CD Integration
+### Continuous Integration
 
 ```bash
-# Fail on any error (default behavior)
-pycmdcheck
+# Fail the job on warnings and errors from the checks that read files
+pycmdcheck --profile triage --fail-on warning
 
-# Stricter: fail on warnings too
-pycmdcheck --fail-on error --fail-on warning
+# Never fail the job on findings, and keep the report for a later step
+pycmdcheck --profile triage --json --exit-zero > report.json
 
-# Skip slow checks in CI
-pycmdcheck -s typing
+# Write a report that a later step posts as a comment
+pycmdcheck --profile triage --format markdown --exit-zero --output report.md
 
-# JSON output for parsing
-pycmdcheck --json > results.json
+# Check a repository you do not own with settings from a file of your own
+pycmdcheck --config pycmdcheck-triage.toml --json --exit-zero path/to/repo > report.json
 ```
 
-### Development Workflow
+### Development
 
 ```bash
-# Quick check during development
-pycmdcheck -c metadata -c structure
+# A quick look at two checks, with their detail lines and suggestions
+pycmdcheck --check metadata,license --verbose
 
-# Full check before commit
-pycmdcheck -v
+# Everything that needs no tools
+pycmdcheck --profile triage
 
-# List what will be checked
+# What can be run
 pycmdcheck --list
-```
-
-### Using with uv
-
-```bash
-# Run via uv
-uv run pycmdcheck
-
-# With options
-uv run pycmdcheck -c tests -v
 ```

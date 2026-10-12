@@ -4,24 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pycmdcheck"
-version = "0.1.1"
+version = "0.2.0"
 description = "Python package quality checker inspired by R CMD check"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
-authors = [
-    { name = "pycmdcheck contributors" }
-]
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "James Joseph Balamuta" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
 ]
 keywords = ["package", "check", "quality", "lint", "test"]
 
@@ -29,15 +29,21 @@ dependencies = [
     "click>=8.0",
     "rich>=13.0",
     "packaging>=21.0",
-    "tomli>=2.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
+# Tools that pycmdcheck can run from its own environment. pytest, flake8
+# and pylint have no extra here, because the checks that use them run them
+# from the environment of the project being checked.
 typing-mypy = ["mypy>=1.0"]
 typing-pyright = ["pyright>=1.1"]
 linting = ["ruff>=0.1"]
-all = ["mypy>=1.0", "pyright>=1.1", "ruff>=0.1"]
-dev = ["pytest>=8.0", "pytest-cov>=4.0"]
+build = ["build>=1.0"]
+all = ["mypy>=1.0", "pyright>=1.1", "ruff>=0.1", "build>=1.0"]
+
+[dependency-groups]
+# For working on pycmdcheck itself. "uv sync" installs the dev group.
+dev = ["pytest>=8.0", "pytest-cov>=4.0", "ruff>=0.1", "mypy>=1.0", "build>=1.0"]
 docs = ["quartodoc>=0.7"]
 
 [project.scripts]
@@ -48,6 +54,7 @@ pycmdcheck = "pycmdcheck.cli:main"
 metadata = "pycmdcheck.checks.metadata:MetadataCheck"
 structure = "pycmdcheck.checks.structure:StructureCheck"
 tests = "pycmdcheck.checks.tests:TestsCheck"
+test_suite = "pycmdcheck.checks.test_suite:TestSuiteCheck"
 linting = "pycmdcheck.checks.linting:LintingCheck"
 typing = "pycmdcheck.checks.typing:TypingCheck"
 imports = "pycmdcheck.checks.imports:ImportsCheck"
@@ -68,40 +75,57 @@ doctests = "pycmdcheck.checks.doctests:DoctestsCheck"
 
 [project.urls]
 Homepage = "https://github.com/coatless-py-pkg/pycmdcheck"
+Documentation = "https://py-pkg.thecoatlessprofessor.com/pycmdcheck/"
 Repository = "https://github.com/coatless-py-pkg/pycmdcheck"
 Issues = "https://github.com/coatless-py-pkg/pycmdcheck/issues"
+Changelog = "https://github.com/coatless-py-pkg/pycmdcheck/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pycmdcheck"]
+# Hatchling writes 2.5 by default. The upload step of release.yml checks the
+# metadata with a library that knows 2.4 at most, and 0.1.1 went out as 2.4.
+core-metadata-version = "2.4"
+
+[tool.hatch.build.targets.wheel.force-include]
+# The Agent Skill has one copy, in skills/. The build puts it inside the
+# package, where --install-skill finds it.
+"skills/pycmdcheck" = "pycmdcheck/.agents/skills/pycmdcheck"
+
+[tool.hatch.build.targets.sdist]
+# Ship the source, tests, the skill and top-level documents only. Without
+# this list the sdist picks up every file git does not ignore, rendered docs
+# included. The skill is here so that a wheel can be built from the sdist.
+include = [
+    "/src",
+    "/tests",
+    "/skills",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+core-metadata-version = "2.4"
 
 [tool.pycmdcheck]
-# Default configuration for pycmdcheck itself
+# Configuration for running pycmdcheck on itself. Every check is enabled by
+# default, and the linting and typing checks find ruff and mypy from the
+# [tool.ruff] and [tool.mypy] tables below.
 fail_on = ["error"]
 
 [tool.pycmdcheck.checks]
-metadata = true
-structure = true
-tests = { enabled = true, runner = "pytest" }
-linting = { enabled = true, tool = "ruff" }
-typing = { enabled = true, tool = "mypy" }
-imports = true
-license = true
-docs = true
-dependencies = true
-build = true
-formatting = { enabled = true, tool = "ruff" }
-version = true
-py_typed = true
+# This project formats with ruff but has no [tool.ruff.format] table for the
+# formatting check to detect, so the tool is named here.
+formatting = { tool = "ruff" }
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 strict = true
@@ -109,3 +133,14 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+# "uv run pytest --cov=pycmdcheck" measures which lines and branches of the
+# package the tests ran. The tests run __main__.py in a separate process, so
+# it shows 0% unless that process is measured too.
+source = ["pycmdcheck"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

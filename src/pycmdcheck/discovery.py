@@ -16,6 +16,8 @@ import logging
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING
 
+from pycmdcheck.profiles import ALL_CHECKS, DEPRECATED_CHECKS
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -23,6 +25,12 @@ if TYPE_CHECKING:
 
 ENTRY_POINT_GROUP = "pycmdcheck.checks"
 """Entry point group name for check plugins."""
+
+_BUILTIN_MODULE_PREFIX = "pycmdcheck.checks."
+
+# The names a plugin cannot take: the built-in checks, and the deprecated
+# ones that are still registered.
+_RESERVED_NAMES = ALL_CHECKS | DEPRECATED_CHECKS
 
 
 @functools.lru_cache(maxsize=1)
@@ -34,12 +42,15 @@ def discover_checks() -> dict[str, type["Check"]]:
     package's pyproject.toml, and third-party packages can register
     additional checks.
 
-    If a check fails to load (e.g., due to an import error), a warning is
-    logged (via ``logger.warning``) but discovery continues with other checks.
+    A plugin that fails to load, for any reason, is skipped with a logged
+    warning, and discovery continues with the other checks. The names of the
+    built-in checks, deprecated ones included, are reserved: a plugin that
+    registers one of them is skipped with a warning, so a plugin cannot
+    replace a built-in check.
 
     Returns:
-        A dictionary mapping check names (strings) to check classes.
-        The check classes implement the Check protocol from
+        A dictionary mapping check names (strings) to check classes, sorted
+        by name. The check classes implement the Check protocol from
         pycmdcheck.checks.base.
 
     Examples:
@@ -60,19 +71,37 @@ def discover_checks() -> dict[str, type["Check"]]:
 
     eps = entry_points(group=ENTRY_POINT_GROUP)
     for ep in eps:
+        if ep.name in _RESERVED_NAMES and not ep.value.startswith(
+            _BUILTIN_MODULE_PREFIX
+        ):
+            logger.warning(
+                "Ignoring check '%s' from %s: the name belongs to a built-in check",
+                ep.name,
+                ep.value,
+            )
+            continue
         try:
             check_class = ep.load()
-            checks[ep.name] = check_class
-        except (ImportError, AttributeError, TypeError) as e:
-            # Log warning but continue with other checks
+        except Exception as e:
+            # One broken plugin must not take every command down with it.
             logger.warning(
                 "Failed to load check '%s' from %s: %s",
                 ep.name,
                 ep.value,
                 e,
             )
+            continue
+        if not callable(check_class):
+            logger.warning(
+                "Ignoring check '%s' from %s: it is not a class",
+                ep.name,
+                ep.value,
+            )
+            continue
+        checks[ep.name] = check_class
 
-    logger.debug("Discovered %d checks: %s", len(checks), ", ".join(sorted(checks)))
+    checks = dict(sorted(checks.items()))
+    logger.debug("Discovered %d checks: %s", len(checks), ", ".join(checks))
     return checks
 
 
@@ -105,17 +134,14 @@ def list_available_checks() -> list[tuple[str, str]]:
         >>> for name, desc in list_available_checks():
         ...     print(f"  {name}: {desc}")  # doctest: +SKIP
           docs: Check documentation presence
-          imports: Check that package imports work
+          license: Check for license file
           ...
     """
     checks = discover_checks()
     result: list[tuple[str, str]] = []
 
     for name, check_class in sorted(checks.items()):
-        try:
-            description = getattr(check_class, "description", "No description")
-            result.append((name, description))
-        except (AttributeError, TypeError):
-            result.append((name, "No description available"))
+        description = getattr(check_class, "description", None)
+        result.append((name, str(description or "No description available")))
 
     return result

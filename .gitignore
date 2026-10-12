@@ -10,6 +10,15 @@ build/
 .venv/
 venv/
 
+# Test and tool caches
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # OS
 .DS_Store
 
@@ -17,6 +26,13 @@ venv/
 .idea/
 .vscode/
 *.swp
+
+# Generated documentation
+docs/_site/
+docs/reference/
+docs/_inv/
+docs/objects.json
+docs/.quarto/
 
 # Plans (keep locally, don't track)
 docs/plans/

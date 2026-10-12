@@ -2,141 +2,396 @@
 title: Custom Checks
 ---
 
-pycmdcheck is designed to be extensible. You can create custom checks and register them via Python entry points.
+A custom check is a class that pycmdcheck finds through a Python entry point.
+An entry point is a line in a package's `pyproject.toml` that tells other
+programs where to find something the package provides. Any package installed
+in the same environment as pycmdcheck can supply a check this way.
+
+The examples on this page belong to one package, laid out like this.
+
+```
+my-package/
+├── pyproject.toml
+├── src/
+│   └── my_package/
+│       ├── __init__.py
+│       └── checks/
+│           ├── __init__.py
+│           ├── check_copyright.py
+│           └── check_security.py
+└── tests/
+    └── test_check_copyright.py
+```
 
 ## The Check Protocol
 
-All checks must implement the `Check` protocol:
+A check has a name, a description and a `run` method.
 
 ```python
-from typing import Protocol, Any
 from pathlib import Path
+from typing import Any, Protocol
+
 from pycmdcheck.results import CheckResult
+
 
 class Check(Protocol):
     name: str
     description: str
 
-    def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
-        ...
+    def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult: ...
 ```
+
+`package_path` is the absolute path of the project being checked. `config`
+holds the options that project set for the check.
 
 ## Using BaseCheck (Recommended)
 
-The easiest way to create a custom check is to inherit from `BaseCheck`:
+The simplest way to write a check is to inherit from `BaseCheck`. This one
+goes in `check_security.py`.
 
 ```python
+"""Custom check for secrets left in a repository."""
+
 from pathlib import Path
 from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
-from pycmdcheck.results import CheckResult, CheckStatus
+from pycmdcheck.fileio import display_path, find_declared_files, try_read_text
+from pycmdcheck.package_layout import PackageLayout
+from pycmdcheck.results import CheckResult, CheckStatus, Finding, most_severe
 
 
 class SecurityCheck(BaseCheck):
-    """Check for common security issues."""
+    """Look for committed .env files and secrets written into the code."""
 
     name = "security"
     description = "Check for common security issues"
+    rules = {
+        "security.env-file": "A .env file is committed",
+        "security.possible-secret": "A module assigns a password or an API key",
+    }
+    hints = {
+        "security.env-file": "Remove the .env file from Git and list it in .gitignore.",
+        "security.possible-secret": (
+            "Read the value from an environment variable, and replace the "
+            "secret that was committed."
+        ),
+    }
 
     def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
-        details: list[str] = []
-        issues: list[str] = []
+        findings: list[Finding] = []
 
-        # Check for .env files that shouldn't be committed
-        env_files = list(package_path.glob("**/.env"))
-        if env_files:
-            issues.append(f"Found {len(env_files)} .env file(s)")
-
-        # Check for hardcoded secrets (simplified example)
-        for py_file in package_path.rglob("*.py"):
-            content = py_file.read_text()
-            if "password=" in content.lower() or "api_key=" in content.lower():
-                issues.append(f"Potential hardcoded secret in {py_file.name}")
-
-        # Return result
-        if issues:
-            return CheckResult(
-                name=self.name,
-                status=CheckStatus.WARNING,
-                message=f"Found {len(issues)} security issue(s)",
-                details=issues,
+        # .env files that should not be committed. The search does not enter
+        # hidden directories such as .venv or .git.
+        for env_file in find_declared_files(package_path, ["**/.env"]):
+            shown = display_path(env_file, package_path)
+            findings.append(
+                Finding(
+                    "security.env-file",
+                    f"Found {shown}",
+                    CheckStatus.WARNING,
+                    # This advice names the file, so the check gives it here.
+                    hint=f"Remove {shown} from Git and list it in .gitignore.",
+                )
             )
 
-        details.append("No security issues found")
+        # Secrets written into the package's own modules (simplified).
+        py_files = PackageLayout(package_path).source_files()
+        for py_file in py_files:
+            content = try_read_text(py_file)
+            if content is None:
+                continue
+            lowered = content.lower()
+            if "password=" in lowered or "api_key=" in lowered:
+                shown = display_path(py_file, package_path)
+                # No hint is given here, so pycmdcheck takes it from hints.
+                findings.append(
+                    Finding(
+                        "security.possible-secret",
+                        f"Possible secret in {shown}",
+                        CheckStatus.WARNING,
+                    )
+                )
+
+        if findings:
+            return CheckResult(
+                name=self.name,
+                status=most_severe(findings),
+                message=f"Found {len(findings)} security issue(s)",
+                details=[
+                    "Looked for .env files and for password= or api_key= "
+                    f"in {len(py_files)} Python file(s)",
+                    *(finding.message for finding in findings),
+                ],
+                findings=findings,
+            )
+
         return CheckResult(
             name=self.name,
             status=CheckStatus.OK,
             message="Security check passed",
-            details=details,
+            details=[f"Scanned {len(py_files)} Python file(s), found no .env file"],
         )
 ```
 
+The check lists its two rules in `rules` and returns one finding for each
+thing it found. [Rules and Findings](#rules-and-findings) below explains
+both. In `hints` it says what to do about each rule, and [Hints](#hints)
+explains that.
+
+The example uses four helpers that the built-in checks use as well.
+
+- `find_declared_files(package_path, patterns)` returns the files in the
+  project that match a list of glob patterns, 50 at most. A `**` in a pattern
+  does not enter hidden directories or follow links to directories.
+- `PackageLayout(package_path).source_files()` returns the Python files of the
+  project's own package. It leaves out tests, hidden directories and virtual
+  environments. A plain `package_path.rglob("*.py")` would also read every
+  package installed in a `.venv` directory.
+- `try_read_text(path)` reads up to 1 mebibyte (MiB) of a file, whatever its
+  encoding, and returns `None` when the file cannot be read. A mebibyte is
+  1,048,576 bytes. `path.read_text()` raises an exception on a file it cannot
+  decode.
+- `display_path(path, package_path)` gives the path relative to the project,
+  in a form that is safe to print.
+
+The `pycmdcheck.fileio` module and `source_files()` are new in version 0.2.0.
+Version 0.1.1 had a `PackageLayout.python_files()` method that was never
+documented, and it is gone. A check written for 0.1.1 with nothing but
+`BaseCheck`, `CheckResult` and `CheckStatus` needs no change. The other names
+in pycmdcheck's helper modules are internal and can change from one release
+to the next.
+
 ## CheckResult
 
-The `CheckResult` dataclass is used to return check results:
+`run` returns a `CheckResult`.
 
 ```python
-from pycmdcheck.results import CheckResult, CheckStatus
+from pycmdcheck.results import CheckResult, CheckStatus, Finding
 
 result = CheckResult(
-    name="my_check",           # Check name
-    status=CheckStatus.OK,      # Status enum
-    message="Check passed",     # Main message
-    details=["Detail 1"],       # Optional list of details
+    name="my_check",  # the check name
+    status=CheckStatus.NOTE,  # one of the five statuses
+    message="No CONTRIBUTING file found",  # one line
+    details=[  # optional lines that say what the check looked for and found
+        "Looked in the project root and .github/ for CONTRIBUTING.md",
+    ],
+    findings=[  # what was found, for a program that reads the JSON report
+        Finding(
+            "my_check.missing-contributing",  # the code of the rule
+            "No CONTRIBUTING file found",  # one line of plain text
+            CheckStatus.NOTE,  # NOTE, WARNING or ERROR
+            hint="Add a CONTRIBUTING.md file to the project root.",  # what to do
+        )
+    ],
 )
 ```
 
 ### CheckStatus Values
 
-| Status | When to Use |
-|--------|-------------|
-| `CheckStatus.OK` | Check passed successfully |
-| `CheckStatus.NOTE` | Informational message, not a problem |
-| `CheckStatus.WARNING` | Potential issue, should be reviewed |
-| `CheckStatus.ERROR` | Check failed |
-| `CheckStatus.SKIPPED` | Check couldn't run (e.g., tool not installed) |
+| Status | When to use it |
+|--------|----------------|
+| `CheckStatus.OK` | The check found what it looked for |
+| `CheckStatus.NOTE` | Something the author of the checked package can improve |
+| `CheckStatus.WARNING` | A likely problem that should be looked at |
+| `CheckStatus.ERROR` | The check failed |
+| `CheckStatus.SKIPPED` | The check did not look at anything, for example because a tool is not installed |
+
+### Rules and Findings {#rules-and-findings}
+
+A result says what the check found in two ways. The message and the details
+are for people. The findings are for a program that reads the
+[JSON report](cli.qmd#json-output). `findings`, `rules`, `hints` and the skip
+reasons are new in version 0.2.0.
+
+A `Finding` has a code, one line of text and a status. It can also carry a
+hint, which [Hints](#hints) below describes. The code is the check name, a
+dot, and a rule name in lower case with hyphens. Other programs will compare
+it, so name it for what the rule means and keep it once it is released. List
+every code the check can return in the class attribute `rules`, each with one
+line that describes the rule. `pycmdcheck --list-rules` prints them.
+
+The built-in checks keep to this table, and a custom check should do the
+same.
+
+| Status of the result | What the result carries |
+|----------------------|-------------------------|
+| OK | No findings |
+| NOTE, WARNING or ERROR | At least one finding. Every code is a key of `rules`, and the status is `most_severe(findings)`. |
+| SKIPPED | No findings, and a skip reason. `CheckResult.skip()` builds it. |
+
+`most_severe()` returns the most severe status among the findings, and OK for
+an empty list.
+
+Return SKIPPED whenever the check did not look at anything, and give one of
+the [skip reasons](rules.qmd#skip-reasons).
+
+```python
+return CheckResult.skip(
+    self.name,
+    "No Python files to check",  # the message
+    "not-applicable",  # the skip reason
+    ["Found no package or module under src/ or the project root"],
+)
+```
+
+A custom check is likely to need four of them, which are `tool-missing`,
+`not-configured`, `not-applicable` and `prerequisite-failed`.
+
+Keep NOTE for something the author of the checked package can improve. A real
+shortcoming keeps its status as well. A package with no tests gets a WARNING
+from the built-in `test_suite` check, not a skipped result.
+
+pycmdcheck does not enforce any of this on a custom check. A check that
+declares no rules and returns no findings still runs. Its results then have
+an empty `findings` list in the report, and a program has only the status and
+the text to go by.
+
+### Hints {#hints}
+
+A hint is one sentence that says what to do about a finding. A report shows
+it as a suggestion. `pycmdcheck --verbose`, or `-v` for short, prints it
+under the detail lines of the check, in a line that starts with
+`Suggestion:`. A hint that several findings share is printed once. The
+Markdown report lists it after the details with the same label, and the JSON
+report gives it in the `hint` key of the finding. Without `--verbose` the
+terminal report ends with the line
+`Run again with --verbose to see a suggestion for each finding.` when a
+finding has a hint.
+
+Give one hint for each code in the class attribute `hints`, a dictionary
+with the same keys as `rules`. Both examples on this page have one. Once
+`run` has returned, pycmdcheck puts the hint on every finding with that code
+that has no hint of its own. `pycmdcheck --list-rules` prints it under the
+rule, in a line that starts with `Suggestion:` as well.
+
+Pass `hint=` to a `Finding` when the advice depends on what was found. The
+`security` check above does that for a `.env` file, so its hint names the
+file to remove. A finding that brings a hint of its own keeps it, and the
+report then shows a more exact sentence than `--list-rules` does.
+
+Write a hint the way the built-in checks do. It is one sentence of plain text
+that starts with a verb and ends with a full stop, and it has at most 160
+characters.
+
+Hints are optional. A check with no `hints` still works, and its findings
+carry no hint. A `hints` attribute that is not a dictionary counts as none,
+and so does an entry or a `hint=` value that is not text or is blank.
+
+### What to Put in Details
+
+A result that is not OK should carry at least one detail line, unless its
+message leaves nothing to add. Together the lines should say two things.
+
+1. What the check looked for, and where.
+2. What it found.
+
+What would fix it belongs in a [hint](#hints), which the report prints after
+the detail lines. A check that gives no hints should say it in a last detail
+line. Say it in one of the two places only, or `--verbose` prints the advice
+twice.
+
+Keep each line short and show paths relative to the project. When a list is
+long, cut it and say how many entries were left out.
+
+Write the message and the detail lines as plain text. The terminal report
+prints them as they are, and the
+[Markdown report](cli.qmd#markdown-output) escapes them, so markup in a line
+is shown and not read.
+
+## What `run` Must Not Do
+
+`run` must return a `CheckResult` and must never end the process. pycmdcheck
+runs several checks in one process, so a check that called `sys.exit()` would
+take the others with it. pycmdcheck catches that call and reports the check as
+an error. The message names the exit code, as in `Check called sys.exit(1)`,
+and the finding has the code `pycmdcheck.check-exited`.
+
+An exception raised inside `run` is caught in the same way, with the code
+`pycmdcheck.check-raised`. So is a return value that is not a `CheckResult`,
+with the code `pycmdcheck.invalid-result`. Both are reported as an error whose
+message starts with `Check raised exception`, and `--debug` shows the
+traceback.
 
 ## Registering Your Check
 
-Register your check using Python entry points in your `pyproject.toml`:
+Register each check under the `pycmdcheck.checks` entry point group in the
+`pyproject.toml` of the package that holds it.
 
 ```toml
 [project.entry-points."pycmdcheck.checks"]
-security = "my_package.checks:SecurityCheck"
+security = "my_package.checks.check_security:SecurityCheck"
+copyright = "my_package.checks.check_copyright:CopyrightCheck"
 ```
 
-The format is:
+The key is the check name and the value is `module.path:ClassName`. Use the
+same name as the class's `name` attribute. Then install the package in the
+same environment as pycmdcheck. `pycmdcheck --list` shows the new checks.
+
+Four rules apply to a custom check.
+
+- The names of the built-in checks are reserved, and so is `imports`, the
+  name of a deprecated check. An entry point that uses one of them is skipped
+  with a warning, so a custom check cannot replace a built-in one.
+- A check that fails to load, for example because its module cannot be
+  imported, is skipped with a warning on standard error. The other checks
+  still run.
+- Custom checks are outside every profile. A profile lists built-in checks
+  only.
+- A custom check runs in a run with no profile, or when `--check`, or `-c`
+  for short, names it. It cannot run in a run with
+  [`--config`](cli.qmd#config-file), because a settings file starts from a
+  profile and `--check` cannot add a check there.
+
+```bash
+pycmdcheck --check copyright,security
 ```
-check_name = "module.path:ClassName"
+
+The names are separated by a comma with no space after it. The option can
+also be repeated, as in `--check copyright --check security`.
+
+The Python API takes the same names.
+
+```python
+from pycmdcheck import check
+
+report = check("path/to/project", checks=["copyright", "security"])
 ```
+
+A name that no installed check has is an error in both places. The command
+line exits with code 2, and `check()` raises `ValueError` with a message that
+lists the checks that are installed. So a check whose package is missing, or
+whose entry point failed to load, is reported at once and never left out in
+silence.
+
+An unknown name given to `--skip`, or `-s` for short, is a usage error with
+exit code 2 as well. A command that skips a custom check with `--skip`
+therefore fails where that check is not installed. The `skip` argument of
+`check()` is more lenient. An unknown name there is logged as a warning and
+ignored.
 
 ## Using Configuration
 
-Checks receive their configuration via the `config` parameter:
-
-```python
-def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
-    # Get configuration options
-    strict = config.get("strict", False)
-    patterns = config.get("patterns", [])
-
-    # Use in your check logic
-    if strict:
-        # More rigorous checking
-        ...
-```
-
-Users configure your check in their `pyproject.toml`:
+A project sets options for your check in its own `pyproject.toml`.
 
 ```toml
 [tool.pycmdcheck.checks]
-security = { enabled = true, strict = true, patterns = ["*.key", "*.pem"] }
+copyright = { text = "Copyright 2026 Ada Example", exclude = ["legacy.py"] }
 ```
+
+`run` receives that table as `config`, with an `enabled` key added. The
+complete example below reads its two options with
+`config.get("text", "Copyright")` and `config.get("exclude", [])`.
+
+The values come from the project being checked, so give every option a default
+and do not assume a value has the type you expect. pycmdcheck does not look
+inside the table, and a project can write `exclude = "legacy.py"` where you
+expect a list. The example tests each value with `isinstance` and uses the
+default when the type is wrong.
 
 ## Complete Example
 
-Here's a complete example of a custom check that validates copyright headers:
+This check looks for a copyright line at the top of each Python file.
 
 ### check_copyright.py
 
@@ -147,53 +402,86 @@ from pathlib import Path
 from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
-from pycmdcheck.results import CheckResult, CheckStatus
+from pycmdcheck.fileio import display_path, try_read_text
+from pycmdcheck.package_layout import PackageLayout
+from pycmdcheck.results import CheckResult, CheckStatus, Finding, most_severe
+
+MAX_LISTED = 10
 
 
 class CopyrightCheck(BaseCheck):
-    """Check that all Python files have copyright headers."""
+    """Check that the package's Python files have a copyright header."""
 
     name = "copyright"
     description = "Check for copyright headers in Python files"
+    rules = {"copyright.missing-header": "A Python file has no copyright header"}
+    hints = {
+        "copyright.missing-header": (
+            "Add a copyright line at the top of each file named in the details."
+        )
+    }
 
     def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
-        # Get configuration
+        # The options come from the project being checked, so a value of the
+        # wrong type is replaced by the default.
         required_text = config.get("text", "Copyright")
-        exclude_patterns = config.get("exclude", ["test_*.py", "*_test.py"])
+        if not isinstance(required_text, str):
+            required_text = "Copyright"
+        exclude_patterns = config.get("exclude", [])
+        if not isinstance(exclude_patterns, list):
+            exclude_patterns = []
+        # Path.match raises ValueError for an empty pattern such as "" or ".".
+        exclude_patterns = [
+            p for p in exclude_patterns if isinstance(p, str) and Path(p).parts
+        ]
 
-        # Find Python files
-        py_files = list(package_path.rglob("*.py"))
-
-        # Filter excluded files
-        def is_excluded(path: Path) -> bool:
-            return any(path.match(pat) for pat in exclude_patterns)
-
-        py_files = [f for f in py_files if not is_excluded(f)]
-
+        # The package's own modules. Tests, hidden directories and virtual
+        # environments are left out.
+        py_files = [
+            f
+            for f in PackageLayout(package_path).source_files()
+            if not any(f.match(pattern) for pattern in exclude_patterns)
+        ]
         if not py_files:
-            return CheckResult(
-                name=self.name,
-                status=CheckStatus.SKIPPED,
-                message="No Python files to check",
+            # The check looked at nothing, so it is skipped and says why.
+            return CheckResult.skip(
+                self.name,
+                "No Python files to check",
+                "not-applicable",
+                ["Found no package or module under src/ or the project root"],
             )
 
-        # Check each file
         missing: list[str] = []
         for py_file in py_files:
-            content = py_file.read_text()
-            # Check first 10 lines for copyright
+            # try_read_text never fails on an encoding. It returns None for a
+            # file that cannot be read at all.
+            content = try_read_text(py_file)
+            if content is None:
+                continue
             first_lines = "\n".join(content.split("\n")[:10])
             if required_text not in first_lines:
-                rel_path = py_file.relative_to(package_path)
-                missing.append(str(rel_path))
+                missing.append(display_path(py_file, package_path))
 
-        # Return result
         if missing:
+            message = f"{len(missing)} file(s) missing copyright header"
+            details = [
+                f'Looked for "{required_text}" in the first 10 lines of '
+                f"{len(py_files)} file(s)",
+                *missing[:MAX_LISTED],
+            ]
+            if len(missing) > MAX_LISTED:
+                details.append(f"(+{len(missing) - MAX_LISTED} more)")
+            # One finding for the rule. The files are in the details, and
+            # what to do about them is in hints.
+            findings = [
+                Finding("copyright.missing-header", message, CheckStatus.WARNING)
+            ]
             return CheckResult(
                 name=self.name,
-                status=CheckStatus.WARNING,
-                message=f"{len(missing)} file(s) missing copyright header",
-                details=missing[:10],  # Limit details
+                status=most_severe(findings),
+                message=message,
+                details=details,
+                findings=findings,
             )
 
         return CheckResult(
@@ -203,62 +491,102 @@ class CopyrightCheck(BaseCheck):
         )
 ```
 
-### pyproject.toml (in your package)
+### What It Reports
 
-```toml
-[project.entry-points."pycmdcheck.checks"]
-copyright = "my_package.checks.check_copyright:CopyrightCheck"
+With the check installed, `pycmdcheck --check copyright --verbose` on a
+package with two modules and no copyright lines prints this.
+
+```
+│  ⚠  │ copyright │ 2 file(s) missing copyright header │ 0.00s │
+└─────┴───────────┴────────────────────────────────────┴───────┘
+
+copyright details:
+  Looked for "Copyright" in the first 10 lines of 2 file(s)
+  src/riverplot/__init__.py
+  src/riverplot/core.py
+  Suggestion: Add a copyright line at the top of each file named in the details.
 ```
 
-### Usage in target project
+The last line is the hint of the finding. The terminal report does not show
+the finding itself. The JSON report does. This is the `findings` key of the
+same result in the output of `pycmdcheck --check copyright --json`.
 
-```toml
-[tool.pycmdcheck.checks]
-copyright = { enabled = true, text = "Copyright 2024 My Company" }
+```json
+"findings": [
+  {
+    "code": "copyright.missing-header",
+    "status": "warning",
+    "message": "2 file(s) missing copyright header",
+    "hint": "Add a copyright line at the top of each file named in the details."
+  }
+]
 ```
 
 ## Testing Your Check
 
-Test your check by instantiating it and calling `run()`:
+Create a small package in a temporary directory, call `run()` on it, and
+compare the status, the codes of the findings and the skip reason. This is
+`tests/test_check_copyright.py`.
 
 ```python
-import tempfile
 from pathlib import Path
 
-from my_package.checks import CopyrightCheck
+from pycmdcheck.results import CheckStatus
+
+from my_package.checks.check_copyright import CopyrightCheck
 
 
-def test_copyright_check_passes():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        pkg = Path(tmpdir)
-
-        # Create a file with copyright
-        (pkg / "module.py").write_text('"""Copyright 2024"""\n\ndef foo(): pass')
-
-        check = CopyrightCheck()
-        result = check.run(pkg, {"text": "Copyright"})
-
-        assert result.status.value == "ok"
+def make_package(root: Path, source: str) -> None:
+    package = root / "src" / "demo"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text(source)
 
 
-def test_copyright_check_warns():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        pkg = Path(tmpdir)
+def test_copyright_check_passes(tmp_path: Path) -> None:
+    make_package(tmp_path, '"""Copyright 2026 Example."""\n')
 
-        # Create a file without copyright
-        (pkg / "module.py").write_text("def foo(): pass")
+    result = CopyrightCheck().run(tmp_path, {"text": "Copyright"})
 
-        check = CopyrightCheck()
-        result = check.run(pkg, {"text": "Copyright"})
+    assert result.status == CheckStatus.OK
+    assert result.findings == []
 
-        assert result.status.value == "warning"
+
+def test_copyright_check_warns(tmp_path: Path) -> None:
+    make_package(tmp_path, "def foo(): pass\n")
+
+    result = CopyrightCheck().run(tmp_path, {"text": "Copyright"})
+
+    assert result.status == CheckStatus.WARNING
+    assert [finding.code for finding in result.findings] == ["copyright.missing-header"]
+    assert "src/demo/__init__.py" in result.details
+
+
+def test_copyright_check_is_skipped_without_python_files(tmp_path: Path) -> None:
+    result = CopyrightCheck().run(tmp_path, {})
+
+    assert result.status == CheckStatus.SKIPPED
+    assert result.skip_reason == "not-applicable"
 ```
+
+A test that calls `run()` itself sees only the hints the check passed with
+`hint=`. pycmdcheck adds the ones from `hints` later, when it runs the check,
+so here the `hint` of the finding is `None`.
 
 ## Best Practices
 
-1. **Use descriptive names**: The `name` attribute should be short and descriptive
-2. **Provide helpful messages**: The `message` should explain what happened
-3. **Include details**: Use the `details` list for specific file names or issues
-4. **Handle errors gracefully**: Return `SKIPPED` if tools aren't available
-5. **Respect configuration**: Make your check configurable via the `config` dict
-6. **Test thoroughly**: Write tests for all status outcomes
+1. Give the check a short name that says what it looks at.
+2. Write a `message` that states the conclusion in one line.
+3. Say in `details` what the check looked for and what it found, and say in
+   a hint what would fix it.
+4. List every code in `rules`, and return a finding for everything that is
+   not OK.
+5. Return `SKIPPED` with a skip reason when the check did not look at
+   anything.
+6. Read the project's files through the helpers above, so that a large,
+   unreadable or oddly encoded file does not make the check raise.
+7. Give every option a default, and test a value's type before you use it.
+8. Test each status the check can return.
+9. If the check starts another program, do as the built-in checks do. Return
+   `SKIPPED` with the reason `tool-missing` when the program is not installed
+   and `WARNING` when it is installed and could not run. A broken tool is
+   then not reported as a defect in the project.

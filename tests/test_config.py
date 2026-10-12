@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
+import pytest
+
 from pycmdcheck.config import (
+    DEFAULT_CONFIG,
     get_check_config,
     is_check_enabled,
     load_config,
@@ -20,12 +23,23 @@ class TestLoadConfig:
         assert "checks" in config
         assert config["fail_on"] == ["error"]
 
-    def test_load_from_pyproject(self, temp_package: Path) -> None:
-        """Test loading config from pyproject.toml."""
-        config = load_config(temp_package)
+    @pytest.mark.parametrize("name", ["linting", "typing", "formatting"])
+    def test_tool_defaults_to_auto(self, empty_dir: Path, name: str) -> None:
+        """Each tool check picks the project's own tool unless told otherwise."""
+        assert DEFAULT_CONFIG["checks"][name]["tool"] == "auto"
+        assert get_check_config(load_config(empty_dir), name)["tool"] == "auto"
 
-        assert isinstance(config, dict)
-        assert "checks" in config
+    def test_configured_tool_wins_over_auto(self, tmp_path: Path) -> None:
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.pycmdcheck.checks.linting]\ntool = "flake8"\n'
+        )
+        config = load_config(tmp_path)
+        assert get_check_config(config, "linting")["tool"] == "flake8"
+        assert get_check_config(config, "typing")["tool"] == "auto"
+
+    def test_load_from_pyproject(self, temp_package: Path) -> None:
+        """Test that a pyproject.toml with no pycmdcheck table gives the defaults."""
+        assert load_config(temp_package) == DEFAULT_CONFIG
 
     def test_config_override(self, tmp_path: Path) -> None:
         """Test that pyproject.toml overrides defaults."""
@@ -84,3 +98,5 @@ class TestCheckConfig:
         """Test missing check defaults to enabled."""
         config = {"checks": {}}
         assert is_check_enabled(config, "unknown") is True
+        # So does every check when "checks" is not a table.
+        assert get_check_config({"checks": "all"}, "docs") == {"enabled": True}

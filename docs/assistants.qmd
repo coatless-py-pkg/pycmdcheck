@@ -1,0 +1,109 @@
+---
+title: With an AI Assistant
+---
+
+An AI assistant that can run commands can check a package with pycmdcheck and
+fix what the report names. pycmdcheck comes with a skill for that, which is a
+short file of instructions the assistant loads when you ask for such a check.
+
+## What an Assistant Gets
+
+- A [JSON report](cli.qmd#json-output) in which every finding has a rule code
+  and a hint. The code is a stable name, and the hint is one sentence that
+  says what to do.
+- A listing of every rule. `pycmdcheck --list-rules --json` prints each code
+  with its hint, so an assistant can look a code up on its own.
+- The [`triage` profile](triage.qmd), which only reads files. An assistant
+  can start with it and run none of your code.
+
+## Installing the Skill
+
+Run this command in the root of a project. It copies the skill to
+`.claude/skills/pycmdcheck`, where Claude Code looks for it.
+
+```bash
+pycmdcheck --install-skill
+```
+
+To use the skill in every project, name the skills directory in your home
+directory.
+
+```bash
+pycmdcheck --install-skill ~/.claude/skills
+```
+
+Run the command again after you upgrade pycmdcheck, and it replaces the copy
+with the skill of the new version. With `uvx pycmdcheck --install-skill`
+nothing has to be installed first. The
+[command-line reference](cli.qmd#install-skill) has the rules of the option.
+
+In Claude Code 2.1.275 or later the skill can be installed as a plugin
+instead. Type this line inside Claude Code.
+
+```
+/plugin install pycmdcheck --marketplace coatless-py-pkg/pycmdcheck
+```
+
+The plugin has the same version number as pycmdcheck, and an update of the
+plugin brings the new skill when that number has changed. As a plugin the
+skill is named `/pycmdcheck:pycmdcheck`. A copy in `.claude/skills` is named
+`/pycmdcheck`.
+
+An installed pycmdcheck also holds the skill inside the package, in
+`.agents/skills/pycmdcheck`, which is where
+[Library Skills](https://library-skills.io) looks. In a project that has
+pycmdcheck in its environment, `uvx library-skills --claude` can link the
+skill into `.agents/skills` and `.claude/skills`. The links follow the
+installed version.
+
+In the [repository](https://github.com/coatless-py-pkg/pycmdcheck) the skill
+is the folder `skills/pycmdcheck`, which can also be copied by hand.
+
+Then ask in your own words, for example "check this package" or "get this
+package ready for a pyOpenSci review". The skill needs pycmdcheck 0.2.0 or
+later, and it has the assistant check the version first. Its one file,
+`SKILL.md`, follows the open [Agent Skills](https://agentskills.io) format,
+so an assistant that reads that format can load it from its own skills
+directory. Name that directory after the option, as in
+`pycmdcheck --install-skill .agents/skills`.
+
+## What the Skill Does
+
+The skill has the assistant work in this order.
+
+1. Find pycmdcheck and check its version.
+2. Run the `triage` profile and read the JSON report.
+3. When you asked for fixes, fix one finding at a time, the most severe
+   first, and run again to confirm that its code is gone. It corrects what is
+   there, and asks before it adds something new.
+4. Ask before it runs your code or your tools.
+5. End with what it found, what it fixed, what is still open and why, which
+   checks were skipped or have not run, and the questions that wait for you.
+
+It tells the assistant to ask you before it does any of these. A request such
+as "check this package" does not count as a yes.
+
+- Run your tests, your doctests or your build, or start your linter, type
+  checker or formatter. The build also downloads the build tools your project
+  names.
+- Run the `urls` check, which sends requests over the network.
+- Add new content, such as a README, tests or a description. It can offer a
+  draft from what your files show, and it writes the draft after a yes.
+- Make a choice that is yours. That covers the license, a code of conduct, a
+  contributing guide, a citation file, a changelog, CI, the build backend,
+  the supported Python versions, how the package is installed, names, contact
+  details and a version number.
+- Install pycmdcheck with pip, create an environment, or install or configure
+  a tool that a skipped check names. It may fetch pycmdcheck with `uvx` or
+  `pipx run`, which changes none of your environments.
+
+It also tells the assistant never to make a report pass by hiding a problem,
+unless you ask for exactly that. That rules out a check that is switched off,
+`--skip`, `# doctest: +SKIP` on an example that fails, a test or example
+weakened only so that it passes, and a placeholder file added only to satisfy
+a check. When a test disagrees with the code and your files do not show which
+one is wrong, it asks you.
+
+The skill approves no command ahead of time, so your assistant asks for
+permission as it usually does. An assistant can still go against these
+instructions, so read what it changed before you keep it.

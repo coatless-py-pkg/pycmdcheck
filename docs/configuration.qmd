@@ -2,298 +2,1383 @@
 title: Configuration
 ---
 
-pycmdcheck is configured via the `[tool.pycmdcheck]` section in your `pyproject.toml`.
+pycmdcheck reads its settings from the `[tool.pycmdcheck]` table of the
+`pyproject.toml` in the directory it checks.
+
+One kind of run does not. A run that is given a settings file with `--config`
+takes everything from that file and does not read the table.
+[A Settings File Outside the Project](#config-file) at the end of this page
+describes the file.
 
 ## Basic Configuration
 
 ```toml
 [tool.pycmdcheck]
-# Exit with non-zero code on these statuses
-fail_on = ["error"]
+# Exit with code 1 on warnings as well as on errors
+fail_on = ["warning"]
 
 [tool.pycmdcheck.checks]
-# Enable/disable checks (every check is enabled by default; list only the
-# ones you want to turn off or configure).
-metadata = true
-structure = true
-tests = true
-linting = true
-typing = true
-imports = true
-license = true
-docs = true
-# ...plus dependencies, build, formatting, version, py_typed, community, ci,
-# changelog, citation, python_versions, urls, doctests. See `pycmdcheck --list`.
+# Every check is enabled by default. List only the ones you want to
+# turn off or configure.
+urls = false
+tests = { runner = "pytest", args = ["-x"] }
 ```
 
-::: {.callout-tip}
-Prefer a [profile](cli.qmd) (`--profile minimal|triage|default|pyopensci|strict`)
-to select a curated check set without editing `pyproject.toml`. A profile's
-check set overrides the per-check enable flags here.
-:::
+A [profile](cli.qmd#profiles) replaces the enable flags with its own check
+set, and its options win over the same options here.
+[Precedence](cli.qmd#precedence) in the command-line reference gives the full
+order.
 
-## Global Options
+A mistake in this table does not stop the run. pycmdcheck prints a warning on
+standard error in each of these cases.
 
-### `fail_on`
+- `pyproject.toml` cannot be read. The defaults are used.
+- `fail_on` is not a list, or one of its entries is not a valid status. That
+  value is ignored.
+- A check is set to something other than `true`, `false` or a table. The check
+  stays enabled.
+- A name under `[tool.pycmdcheck.checks]` matches no check. The name is
+  ignored.
 
-List of statuses that should cause a non-zero exit code.
+The table has two keys, `fail_on` and `checks`. Any other key is ignored
+without a warning. A profile, for one, is chosen with `--profile` and cannot
+be set here.
+
+There is one warning line for each kind of mistake, and the line names the
+values or entries that have it. This table has three kinds.
 
 ```toml
 [tool.pycmdcheck]
-# Default: only errors
-fail_on = ["error"]
+fail_on = ["warnings"]
 
-# Strict: fail on warnings too
-fail_on = ["error", "warning"]
-
-# Very strict: fail on any issue
-fail_on = ["error", "warning", "note"]
+[tool.pycmdcheck.checks]
+linting = "ruff"
+typing = "mypy"
+licence = false
 ```
+
+A run prints these three lines on standard error.
+
+```
+Config: Invalid fail_on value "warnings". Valid values: error, note, warning
+Config: Each entry in 'checks' should be true, false, or a table. Ignoring the value of: linting (str), typing (str)
+Ignoring unknown check name(s) in [tool.pycmdcheck.checks]: licence
+```
+
+A line that starts with `Config:` names at most 25 values or entries and then
+says how many are left, as in `and 3 more`. The line about `checks` names the
+built-in checks first, so a long list of other names cannot hide one.
+
+The options inside a check's table get no such warning, because each check
+reads its own options when it runs. When one of the six
+[tool checks](#options-shared-by-the-tool-checks) cannot use its `args`,
+`timeout`, `tool` or `runner` value, it says so in its own result.
+For every other option, a value of the wrong type passes without a message.
+Where a number is expected, any other value is ignored and the default is
+used. Where `true` or `false` is expected, any non-empty string counts as
+`true`, so `check_docstrings = "no"` turns the docstring scan on.
+
+A [settings file](#config-file) given with `--config` is read strictly.
+There a mistake of any of these kinds is a usage error, and no check runs.
+
+## Global Options
+
+### `fail_on` {#fail_on}
+
+A list that names the status from which the run exits with code 1. The valid
+values are `"error"`, `"warning"` and `"note"`. The default is `["error"]`.
+
+```toml
+[tool.pycmdcheck]
+fail_on = ["warning"]
+```
+
+The value is a threshold, as it is for [`--fail-on`](cli.qmd#fail-on). A
+status brings every more severe status with it.
+
+| Setting | Statuses that fail the run |
+|---------|----------------------------|
+| `fail_on = ["error"]` | error |
+| `fail_on = ["warning"]` | warning and error |
+| `fail_on = ["note"]` | note, warning and error |
+
+When the list names several statuses, the least severe one counts, so
+`["error", "warning"]` means the same as `["warning"]`. The list takes effect
+when `--fail-on` is not given on the command line. A `--fail-on` option
+replaces the list. `--exit-zero` keeps the exit code at 0 whatever either
+says. The closing line of the report still follows the threshold, and so
+does the `failed` key of the report that `--json` prints. An invalid entry
+is ignored with a warning. A run with `--config` does not read the list. It
+uses the `fail_on` of the [settings file](#config-file).
 
 ## Check Configuration
 
-Checks can be configured in two ways:
-
-### Boolean (Simple)
+A check takes either a boolean or a table.
 
 ```toml
 [tool.pycmdcheck.checks]
-metadata = true   # Enable
-linting = false   # Disable
+linting = false                              # turn a check off
+typing = { tool = "mypy", strict = true }    # configure a check
+docs = { enabled = false }                   # the table form of "off"
 ```
 
-### Dictionary (With Options)
+`enabled` defaults to `true` in the table form. A check named with `--check`,
+or `-c` for short, runs whatever `enabled` says, and so does a check that a
+profile selects.
+
+### Options Shared by the Tool Checks
+
+The `build`, `doctests`, `formatting`, `linting`, `tests` and `typing` checks
+each start an external tool. They share two options.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `args` | list of strings | `[]` | Extra arguments, added at the end of the tool's command line |
+| `timeout` | positive number | see each check | Seconds the tool may run before it is stopped |
+
+`args` must be a list with one string for each argument. Any other value, a
+single string included, gives an error result with the message
+`Invalid args option`. A `timeout` that is not a positive number is ignored
+and the default is used, with a detail line that says so. A value above 86400
+seconds, which is 24 hours, is lowered to that.
+
+### Choosing the Tool {#tool-auto}
+
+The `formatting`, `linting` and `typing` checks also have a `tool` option. Its
+default is `"auto"`, which runs the tool the project itself has configured.
+Each check finds that out from the project's files, and its section below
+lists the files and tables it looks for. A project that has configured no
+tool for a check is skipped, with a message such as `No linter configured`
+and the [skip reason](rules.qmd#skip-reasons) `not-configured`. pycmdcheck
+does not hold a project to a linter, a type checker or a formatter that the
+project never chose.
+
+That reason means the configuration was read and names no tool. When
+`pyproject.toml` cannot be read, and no other file such as `ruff.toml` or
+`mypy.ini` selects a tool, the check cannot tell. It is then skipped with the
+message `pyproject.toml could not be read` and the reason
+`prerequisite-failed`, and the `metadata` check reports the broken file.
+
+A tool that you name always runs, whatever the project has configured.
 
 ```toml
 [tool.pycmdcheck.checks]
-tests = { enabled = true, runner = "pytest" }
-linting = { enabled = true, tool = "ruff" }
+linting = { tool = "ruff" }
+typing = { tool = "mypy" }
+formatting = { tool = "ruff" }
 ```
+
+A `tool` value the check does not know is an error. The result carries a
+[hint](rules.qmd#findings) that lists the values, and `--verbose`, or `-v`
+for short, prints it as a suggestion. This is
+`pycmdcheck --check typing --verbose` on a project that sets
+`typing = { tool = "pyre" }`.
+
+```
+│  ✗  │ typing │ Unsupported type checker: pyre │ 0.00s │
+└─────┴────────┴────────────────────────────────┴───────┘
+
+typing details:
+  Suggestion: Set tool in [tool.pycmdcheck.checks.typing] to "auto", "mypy" or "pyright".
+```
+
+A run with `--config` does not read this table. There the tool is named in
+the [settings file](#config-file), in the same form under `[checks]`.
+
+The [`strict` profile](cli.qmd#profiles) names ruff for `linting` and mypy for
+`typing`. A profile's options win over `pyproject.toml`, so under
+`--profile strict` those two tools run on every project, also on one whose
+`pyproject.toml` cannot be read, and a `tool` option set here for either
+check is replaced. The `pyopensci` and `core` profiles set no tool, so
+detection applies under them.
+
+### A Tool That Is Missing or Cannot Run {#tool-could-not-run}
+
+The six checks treat a tool that did not do its job in the same way.
+
+| Situation | Status | Message | Skip reason or code |
+|-----------|--------|---------|---------------------|
+| The tool is not installed | skipped | `ruff not installed`, with a detail line that says how to install it | `tool-missing` |
+| The tool is installed and could not run | warning | `ruff could not run` | `linting.could-not-run` |
+| The tool ran longer than `timeout` | error | `Linting timed out` | `linting.timed-out` |
+
+The messages name the tool or the check, so `ruff` and `Linting` stand for
+whichever applies, and each code starts with the name of the check.
+
+For ruff and for the `build` module, the detail line names the pycmdcheck
+extra that installs the tool, as in `pip install "pycmdcheck[linting]"`.
+pycmdcheck has five extras, which are `linting`, `typing-mypy`,
+`typing-pyright`, `build` and `all`.
+[Getting Started](getting-started.qmd#optional-dependencies) says what each
+one installs and why pytest has none.
+
+A tool could not run when it cannot be started, when it crashes, or when it
+rejects its arguments or its configuration. That says nothing about the
+project's code, which is why it is a warning and not an error. With the
+default `fail_on` it does not make pycmdcheck exit with code 1. The detail
+lines give the exit code, as in `mypy exited with code 2`, and the end of
+what the tool printed, at most 10 lines. When the tool could not be started
+they give the reason.
+
+The `tests` check has one case of its own. A test suite that pytest cannot
+collect is an error, as its [section](#tests) explains.
+
+[Getting Started](getting-started.qmd#tools-the-checks-need) says which tool
+each check needs and where pycmdcheck looks for it.
+
+Some of the tools write into the project. pytest leaves a `.pytest_cache`
+directory and mypy leaves `.mypy_cache`. The build check sends the built files
+to a temporary directory, but a build backend may still write into the source
+tree, as setuptools does with its `*.egg-info` directory. ruff is run without
+its cache.
+
+The linting check does not let ruff apply fixes. It passes `--no-fix` and
+`--no-fix-only` to ruff after every other argument, and ruff follows the last
+one it is given. Neither `fix = true` or `fix-only = true` in the project's
+ruff configuration, nor `--fix` in `args`, changes that.
+
+ruff arguments that write a file or never finish are refused. With
+`--add-noqa`, `--output-file` or `--watch` in `args`, or their short forms
+`-o` and `-w`, the check returns ERROR "Invalid args option" and ruff is not
+started.
+
+The `args` of all six checks are read from the `pyproject.toml` of the
+project being checked. Look at them before you run these checks on a
+repository you did not write. A run with `--config` takes them from the
+[settings file](#config-file) and not from the project.
 
 ## Per-Check Options
 
-### metadata
+The sections are in the order `pycmdcheck --list` uses. A check with no
+options still accepts `true`, `false` and `enabled`.
 
-Validates `pyproject.toml` has required and recommended fields.
+### build
 
-```toml
-[tool.pycmdcheck.checks]
-metadata = true  # No additional options
-```
-
-**Required fields**: `name`, `version`
-**Recommended fields**: `description`, `readme`, `license`, `requires-python`
-**Extended fields** (reported as a NOTE if missing): `authors`, `urls`, `classifiers`
-
-A field declared in PEP 621 `dynamic` (e.g. `dynamic = ["version"]`) counts as
-present. Legacy Poetry projects (`[tool.poetry]` with no `[project]` table) are
-also recognized.
-
-### structure
-
-Validates package directory structure.
-
-```toml
-[tool.pycmdcheck.checks]
-structure = true  # No additional options
-```
-
-Accepts src layout (`src/package/`), flat layout (`package/`), single-file
-modules (`package.py`), PEP 420 implicit namespace packages, and
-native-extension build backends (maturin/scikit-build/setuptools-rust).
-
-### tests
-
-Runs package tests.
-
-```toml
-[tool.pycmdcheck.checks]
-tests = { enabled = true, runner = "pytest" }
-```
-
-**Options:**
+Builds the package with `python -m build` and looks for a wheel or a source
+distribution in the output. The `build` module must be installed in the
+environment that runs pycmdcheck.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `runner` | `"pytest"`, `"unittest"` | `"pytest"` | Test runner to use |
-| `args` | list of strings | `[]` | Additional arguments |
-
-**Examples:**
+| `args` | list of strings | `[]` | Extra arguments for `python -m build` |
+| `timeout` | positive number | `120` | Seconds the build may take |
 
 ```toml
-# Use pytest (default)
-tests = { enabled = true, runner = "pytest" }
-
-# Use unittest
-tests = { enabled = true, runner = "unittest" }
-
-# With custom args
-tests = { enabled = true, runner = "pytest", args = ["-x", "--tb=short"] }
+build = { args = ["--wheel"], timeout = 300 }
 ```
 
-### linting
+A build that fails is an error. A build that
+[could not run](#tool-could-not-run), for example because `args` holds an
+argument that `python -m build` does not know, is a warning with the message
+`build could not run`.
 
-Runs code linting.
+The check is skipped in three cases and starts no build in any of them.
 
-```toml
-[tool.pycmdcheck.checks]
-linting = { enabled = true, tool = "ruff" }
-```
+| Situation | Message | Skip reason |
+|-----------|---------|-------------|
+| The `build` module is not installed | `'build' module not installed` | `tool-missing` |
+| `pyproject.toml` cannot be read, also when a `setup.py` sits beside it | `pyproject.toml could not be read` | `prerequisite-failed` |
+| The project has none of `pyproject.toml`, `setup.py` and `setup.cfg` | `No pyproject.toml found` | `prerequisite-failed` |
 
-**Options:**
+In the last two cases the `metadata` check reports the cause. The module is
+looked for first, so a project with a broken `pyproject.toml` is skipped as
+`tool-missing` where the module is not installed.
+
+### changelog
+
+Looks for a changelog. No options.
+
+It accepts a file named `CHANGELOG`, `CHANGES`, `NEWS`, `HISTORY`, `RELEASES`,
+`RELEASE_NOTES` or `WHATSNEW`, in any letter case, with a `.md`, `.rst` or
+`.txt` extension or none, in the project root, `docs/` or `doc/`. It also
+accepts a directory of release notes named `changes/`, `newsfragments/` or
+`changelog.d/`, and a changelog link in `[project.urls]`. When the only file
+found is in the root and has fewer than 50 characters, the result is a note
+that the changelog is too short. A file in the root that cannot be read is a
+warning with the code `changelog.unreadable` when nothing else counts as a
+changelog. That holds with a short file beside it, and a detail line then
+names the short file.
+
+### ci
+
+Looks for the configuration file of a continuous integration (CI) service. No
+options.
+
+It knows GitHub Actions, CircleCI, Travis CI, GitLab CI, Jenkins, Azure
+Pipelines, Buildkite, AppVeyor, Cirrus CI, Woodpecker CI, Forgejo Actions,
+Gitea Actions, Bitbucket Pipelines, Drone and sourcehut. It reports that a
+file is present and does not read what the configuration runs.
+
+### citation
+
+Looks for a citation file, or for other metadata that says how to cite the
+project. No options.
+
+The check first looks in the project root for a file named `CITATION`, in any
+letter case, with a `.cff`, `.bib`, `.md`, `.txt` or `.rst` extension or none.
+For a `CITATION.cff` it also reports which of the four keys the Citation File
+Format requires (`cff-version`, `message`, `title`, `authors`) it found.
+
+Without such a file, any one of these also passes, with the message
+`Citation metadata found`.
+
+- A `.zenodo.json` file in the project root.
+- A `codemeta.json` file in the project root.
+- A paper for the Journal of Open Source Software, which is a `paper.md` with
+  a `paper.bib` in the same directory. The directory may be the project root,
+  `paper/` or `joss/`.
+- A README in the project root that links a Digital Object Identifier (DOI).
+  A link to `doi.org/10.` counts, and so does a Zenodo badge link.
+
+The names are matched in any letter case. The detail lines say what was
+found, for example
+`Found: paper/paper.md with paper/paper.bib (a Journal of Open Source Software paper)`.
+A project with none of these gets a note.
+
+### community
+
+Looks for a contributing guide and a code of conduct. No options.
+
+The names are `CONTRIBUTING`, and `CODE_OF_CONDUCT`, `CODE-OF-CONDUCT` or
+`CONDUCT`, in any letter case, with a `.md`, `.rst` or `.txt` extension or
+none. They may be in the project root, `.github/`, `docs/` or `doc/`. Default
+files that an organization keeps in its own `.github` repository are not part
+of a clone, so this check cannot see them.
+
+### dependencies
+
+Compares the third-party modules the package imports with the dependencies
+declared in `pyproject.toml`. No options.
+
+An import at module level that no dependency accounts for is a warning, and a
+detail line names the first file that imports each such module. A declared
+dependency that is never imported is a note. Imports that are guarded, for
+example inside `try`/`except ImportError`, inside a function, or under
+`if TYPE_CHECKING`, are listed and not flagged. Extras and development
+dependencies count as declared.
+
+The check imports and executes nothing. To learn which modules a dependency
+provides, it reads the metadata of the packages installed next to pycmdcheck
+and otherwise goes by the dependency's name. Run it from the project's
+environment for the most exact answer.
+
+The check is skipped when it has nothing to compare.
+
+| Situation | Skip reason |
+|-----------|-------------|
+| `pyproject.toml` is missing, cannot be read, or has neither a `[project]` nor a `[tool.poetry]` table | `prerequisite-failed` |
+| `dependencies` or `optional-dependencies` is listed in `dynamic` | `not-applicable` |
+| No source file of the package was found | `not-applicable` |
+
+Source files that were found and could not be parsed are a different matter,
+because the author can fix them. When none of them can be parsed the result
+is a note.
+
+### docs
+
+Looks for a README. When asked, it also looks for documentation beyond the
+README and measures docstring coverage.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `tool` | `"ruff"`, `"flake8"`, `"pylint"` | `"ruff"` | Linting tool |
-| `args` | list of strings | `[]` | Additional arguments |
-
-**Examples:**
-
-```toml
-# Use ruff (default, recommended)
-linting = { enabled = true, tool = "ruff" }
-
-# Use flake8
-linting = { enabled = true, tool = "flake8" }
-
-# Use pylint
-linting = { enabled = true, tool = "pylint" }
-
-# With custom args
-linting = { enabled = true, tool = "ruff", args = ["--select", "E,F,W"] }
-```
-
-### typing
-
-Runs type checking.
+| `require_readme` | boolean | `true` | Report a missing README as a warning |
+| `check_readme_sections` | boolean | `false` | Report a README that does not appear to mention installation or usage |
+| `check_docs_site` | boolean | `false` | Report a project that has no documentation beyond its README |
+| `check_docstrings` | boolean | `false` | Report public modules, classes and functions that have no docstring |
+| `min_docstring_coverage` | number from 0 to 100 | `0` | Share of public items, in percent, that must have a docstring |
 
 ```toml
-[tool.pycmdcheck.checks]
-typing = { enabled = true, tool = "mypy" }
+docs = { check_readme_sections = true, min_docstring_coverage = 80 }
 ```
 
-**Options:**
+A `min_docstring_coverage` above 0 turns the docstring scan on, whether or not
+`check_docstrings` is set, and becomes the pass mark. Coverage at or above it
+passes, and coverage below it is a note. When a file of the sample could not
+be parsed and no public item was counted, there is no coverage to compare,
+and the result is a note with the code `docs.docstrings-not-counted`. With
+`check_docstrings = true` and no minimum, any public item without a docstring
+is a note. The scan reads at most 20 files, spread evenly across the package,
+and says so when it left files out. Names that start with an underscore are
+not counted.
+
+The README may be in the project root, `.github/` or `docs/`, in any letter
+case, or be declared with `readme` in `pyproject.toml`. A README that is found
+and cannot be read is a warning with the code `docs.unreadable-readme`, also
+with `require_readme = false`. Its length and its installation and usage text
+are then not checked.
+
+With `check_docs_site = true` the check looks for documentation beyond the
+README. Any one of these is enough.
+
+1. The setup of a site builder. In the project root that is a Read the Docs
+   file (`.readthedocs.yml` or `readthedocs.yml`), `mkdocs.yml`,
+   `zensical.toml`, `_quarto.yml`, `myst.yml` or `_toc.yml`. In `docs/`,
+   `doc/` or `documentation/` it is a Sphinx `conf.py`, also in a `source/`
+   directory there, or one of `mkdocs.yml`, `_quarto.yml`, `myst.yml` and
+   `_toc.yml`. A name that ends in `.yml` may end in `.yaml` as well.
+2. A page in `docs/`, `doc/` or `documentation/`, at any depth. A page is a
+   file that ends in `.md`, `.rst`, `.qmd`, `.ipynb` or `.adoc`. A file or a
+   directory named `README`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY`,
+   `SUPPORT`, `CHANGELOG`, `GOVERNANCE`, `ISSUE_TEMPLATE` or
+   `PULL_REQUEST_TEMPLATE` does not count, since a project can keep those in
+   `docs/` and have no other documentation. The file that `readme` in
+   `pyproject.toml` names does not count either. A symbolic link to a
+   directory is not followed.
+3. A documentation link in the project metadata. A link counts when a word of
+   its label ends in `doc`, `docs` or `documentation`, as in `Documentation`
+   and `API docs`. Such a link does not count when it leads only to the front
+   page or the README of a repository on GitHub, GitLab, Bitbucket or
+   Codeberg, because that page shows the README again. A link with any label
+   counts when its address is on Read the Docs, GitHub Pages or GitLab Pages.
+   The links are read from `[project.urls]` or the legacy Poetry keys, and
+   from the `project_urls` and `url` of `setup.py` and `setup.cfg`.
+
+Names are matched in any letter case. A project with none of the three gets a
+note with the code `docs.missing-site` and the message
+`No documentation beyond the README found`. When one is found, a detail line
+names it, for example `Found documentation: docs/conf.py`.
+
+The check cannot always read every link. A link may be set when the package
+is built, which happens when `urls` is listed in `dynamic` and when
+`setup.py` computes its `project_urls` or its `url`. A `pyproject.toml` or a
+`setup.py` may also fail to parse. When one of these is the case and nothing
+else was found, the project gets no note, and a detail line says that a
+documentation link could not be looked for.
+
+With `require_readme = false`, a project with no README has nothing for the
+check to look at when the docstring scan counted nothing and
+`check_docs_site` is off. The check is then skipped with the message
+`No documentation to check` and the skip reason `not-applicable`. When the
+scan counted nothing and a file of its sample could not be parsed, the
+message is `Could not parse the package source` and the skip reason is
+`parse-failed`, with or without a minimum.
+
+The `triage`, `pyopensci` and `strict` [profiles](cli.qmd#profiles) each set
+all five of these options, and their values then replace the ones given
+here. All three turn `check_docs_site` on. `triage` turns the docstring scan
+off with `check_docstrings = false` and `min_docstring_coverage = 0`, so a
+project cannot switch it on for a triage run. `pyopensci` and `strict` turn
+it on, with a minimum of 50 and of 80.
+
+### doctests
+
+Runs `pytest --doctest-modules` on the project's own packages and modules.
+Needs pytest.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `tool` | `"mypy"`, `"pyright"` | `"mypy"` | Type checker |
-| `strict` | boolean | `false` | Enable strict mode |
-| `args` | list of strings | `[]` | Additional arguments |
+| `args` | list of strings | `[]` | Extra arguments for pytest |
+| `timeout` | positive number | `120` | Seconds the run may take |
 
-**Examples:**
+A doctest is an example in a docstring. It is a line that starts with `>>>`,
+with the result it should give on the lines below. The check returns one of
+these results.
+
+| What happened | Status | Message |
+|---------------|--------|---------|
+| Every example passed | ok | `All doctests passed` |
+| An example failed | error | `2 doctest(s) failed` |
+| The package has no doctests, or the project has no package or module to collect them from | skipped | `No doctests found` |
+| No example ran, and pytest could not import some files | skipped | `No doctests ran, 2 files not imported` |
+| pytest ended with exit code 2, 3 or 4, which mean a collection error, an internal error and a usage error | warning | `pytest could not run` |
+
+A failed example is an error, so with the default `fail_on` the run exits
+with code 1. Version 0.1.1 gave a warning. The last row is the shared rule
+for a tool that [could not run](#tool-could-not-run). Unlike the `tests`
+check, this check does not turn a collection error into an error.
+
+The two skipped results of the table have different
+[skip reasons](rules.qmd#skip-reasons). `No doctests found` has the reason
+`not-applicable`, because the project gave the check nothing to look at.
+`No doctests ran` has the reason `import-failed`. The files that were left
+out may hold examples, and none of them ran. A run that does not fail then
+ends with a [closing line](cli.qmd#text-output) such as
+`No errors (1 skipped).` and not with `All checks passed!`.
+
+The table leaves out the other results that all the
+[tool checks](#options-shared-by-the-tool-checks) share. A missing pytest
+gives a skipped result with the message `pytest not installed` and the reason
+`tool-missing`. An `args` value that is not a list of strings and a run that
+takes longer than `timeout` each give an error.
+
+The first two messages also give the number of files that pytest could not
+import, as in `All doctests passed, 1 file not imported`.
+
+This is `pycmdcheck --check doctests --verbose` on a package with two wrong
+examples. One of its modules, `maps.py`, imports a package that is not
+installed.
+
+```
+│  ✗  │ doctests │ 2 doctest(s) failed, 1 file not imported │ 0.39s │
+└─────┴──────────┴──────────────────────────────────────────┴───────┘
+
+doctests details:
+  Running: pytest --doctest-modules
+  Using pytest 9.0.2
+  FAILED src/riverplot/__init__.py::riverplot.length - line 9: expected 3, got 2
+  FAILED src/riverplot/__init__.py::riverplot.source - line 20: KeyError('Elbe')
+  1 file could not be imported, so its examples did not run: src/riverplot/maps.py
+  Suggestion: Correct each failed example or the code it calls, or mark an example that cannot run
+    here with # doctest: +SKIP.
+```
+
+A docstring with a failed example gets a detail line of the form
+`FAILED path::name - line N: reason`. The report shows at most 10 of these
+lines and then says how many more there are. The path is the file. The name is the
+function, class or module that the docstring belongs to, and N is the line of
+the failed example in the file. pytest does not know that line for every
+docstring. A function under `@functools.cache` is one such case, and the
+reason then follows the name with no `line N:` before it. For a wrong result
+the reason gives what the docstring expected and what the code gave. When the
+result has several lines, it gives the first line that differs. Three dots
+after what was expected or after what the code gave, as in
+`expected left ..., got right ...`, mean that it has more lines than the one
+shown. For an example that raised an error, the reason is the error, as in
+`KeyError('Elbe')`. The reason is read from what pytest prints. When the
+project changes that, for example with `--tb=no` in `args`, the line ends
+after the name.
+
+pytest counts a docstring as one test. A docstring gets one line however many
+of its examples are wrong, with the line number and the reason of the first
+one, and the number in the message counts docstrings. The details show the
+first 10 of these lines. A line such as `... and 2 more` then says how many
+were left out, and the message still counts them all. Unit tests that live
+inside the package, in a file such as `src/riverplot/tests/test_core.py`, are
+run by this check too, and a failed one is counted as a failed doctest.
+
+The check passes `--doctest-ignore-import-errors` to pytest, so a file that
+pytest cannot import is left out and its examples do not run. A common cause
+is a module that imports an optional dependency which is not installed where
+pycmdcheck runs. A file with a syntax error is left out in the same way. The
+last detail line names such files. They add no finding and never give a
+warning or an error, because the fault may be in the environment of the check
+and not in the package. When no example ran at all, the result is skipped
+with the reason `import-failed`. That is also the result when every example
+of the other files is marked `# doctest: +SKIP`, although such a package
+passes when no file is left out. The check reads this from the line where
+pytest counts what passed, so the result is ok when the project turns that
+line off, for example with `-q` in `args`.
+
+pytest leaves a file out when the import fails with an `ImportError` or a
+syntax error. A module that raises any other error when it is imported, such
+as a `ValueError`, is not left out. pytest then stops with exit code 2, and
+the result is the warning `pytest could not run` from the last row of the
+table. Its details hold no `FAILED` line, so wrong examples in the other
+files are not reported. A warning does not fail the run with the default
+`fail_on`, so the exit code stays 0 when no other check gives an error.
+
+#### Keeping an Example from Running
+
+Some examples cannot run where the check runs, because they need the network,
+a password or a large file. Put `# doctest: +SKIP` at the end of the example
+line. The example stays in the docstring and is not run. The other examples
+of the same docstring still run.
+
+```python
+def length(points):
+    """Return how many points a river has.
+
+    >>> length([(0, 0), (1, 2)])
+    2
+    >>> length(download("Rhine"))  # doctest: +SKIP
+    1320
+    """
+    return len(points)
+```
+
+The module has no `download` function, so the second example would fail if
+it ran. `pycmdcheck --check doctests` on this package passes.
+
+```
+│  ✓  │ doctests │ All doctests passed │
+```
+
+`# doctest: +SKIP` is the standard marker of Python's `doctest` module and
+the counterpart of `\dontrun{}` in R. There is no counterpart of R's
+`\donttest{}`, which marks an example that runs when a reader calls
+`example()` and that `R CMD check` leaves out by default.
+
+To leave a whole file out, pass pytest's `--ignore` option in `args`, with a
+path relative to the project directory.
 
 ```toml
-# Use mypy (default)
-typing = { enabled = true, tool = "mypy" }
+doctests = { args = ["--ignore=src/riverplot/maps.py"] }
+```
 
-# Use pyright
-typing = { enabled = true, tool = "pyright" }
+With this line, the run further up no longer counts `maps.py`, and its
+message is `2 doctest(s) failed`.
 
-# Strict mode
-typing = { enabled = true, tool = "mypy", strict = true }
+#### Running the Examples of a README
 
-# With custom args
-typing = { enabled = true, tool = "mypy", args = ["--ignore-missing-imports"] }
+The check gives pytest only the project's packages and modules, so the
+examples in a README do not run. Two arguments in `args` add them.
+
+```toml
+doctests = { args = ["--doctest-glob=*.md", "README.md"] }
+```
+
+`--doctest-glob=*.md` lets pytest read examples from a Markdown file, and
+`README.md` names the file, with a path relative to the project directory.
+A Markdown file inside the package is then read as well.
+
+The examples of a README start with no names defined, so the README has to
+import the package itself, as in `>>> from riverplot import length`. An
+import that fails there is a failed example and so an error. It is not left
+out as a module is. In a code block between two lines of backticks, leave an
+empty line between the last example and the closing backticks. Without it,
+pytest reads the backticks as part of the expected result.
+
+pytest counts the whole README as one test. A wrong example gives one
+`FAILED` line, which names the file twice and gives the line of the first
+wrong example. This is `pycmdcheck --check doctests --verbose` on a package
+with this setting whose README has a wrong example on line 7.
+
+```
+│  ✗  │ doctests │ 1 doctest(s) failed │ 1.57s │
+└─────┴──────────┴─────────────────────┴───────┘
+
+doctests details:
+  Running: pytest --doctest-modules
+  Using pytest 9.0.2
+  FAILED README.md::README.md - line 7: expected 2, got 3
+  Suggestion: Correct each failed example or the code it calls, or mark an example that cannot run
+    here with # doctest: +SKIP.
 ```
 
 ### formatting
 
-Checks code formatting without modifying files.
-
-```toml
-[tool.pycmdcheck.checks]
-formatting = { enabled = true, tool = "auto" }
-```
-
-**Options:**
+Runs a formatter in its checking mode, which changes no file. That is
+`ruff format --check` or `black --check`.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `tool` | `"auto"`, `"ruff"`, `"black"` | `"auto"` | Formatter to check against |
-| `args` | list of strings | `[]` | Additional arguments |
+| `args` | list of strings | `[]` | Extra arguments for the formatter |
+| `timeout` | positive number | `120` | Seconds the formatter may run |
 
-With `tool = "auto"` (the default), the formatter is detected from the package:
-`[tool.ruff]`/`ruff.toml` → ruff, `[tool.black]` → black. If neither is
-configured the check is **skipped** (pyOpenSci does not mandate a formatter).
+With `tool = "auto"` the check looks for a formatter the project has
+configured, in this order.
+
+1. ruff, when `pyproject.toml` has a `[tool.ruff.format]` table, or when
+   `ruff.toml` or `.ruff.toml` has a `[format]` section, a key that starts
+   with `format.`, or the table on one line, as in
+   `format = { quote-style = "single" }`.
+2. black, when `pyproject.toml` has a `[tool.black]` table.
+
+A project with neither is skipped with the message `No formatter configured`
+and the skip reason `not-configured`. Other ruff configuration does not
+count, because a project can lint with ruff and not format with it. This is
+`pycmdcheck --check linting,formatting` on a package whose only ruff
+configuration is a `[tool.ruff.lint]` table. The two check names are
+separated by a comma with no space after it, and the option can also be
+[repeated](cli.qmd#selecting-checks).
+
+```
+│  ✓  │ linting    │ No linting issues found │
+│  ○  │ formatting │ No formatter configured │
+```
+
+A project that formats with ruff at its default settings has no format table
+either. To have it checked, add a `[tool.ruff.format]` table, which may be
+empty, or name the tool.
+
+```toml
+formatting = { tool = "ruff" }
+```
+
+Files that would be reformatted are a warning. A formatter that
+[could not run](#tool-could-not-run) is a warning as well.
 
 ### imports
 
-Validates all imports can be resolved.
+Deprecated. Version 0.2.0 merged this check into
+[`dependencies`](#dependencies), which reports undeclared imports from the
+same scan. No options.
 
-```toml
-[tool.pycmdcheck.checks]
-imports = true  # No additional options
-```
+The name still works for one release. A run leaves the check out unless
+`--check` or `checks=` names it, and it is then skipped with the message
+`Merged into the dependencies check` and the skip reason `deprecated`. Remove
+an `imports` entry from `[tool.pycmdcheck.checks]`, and run `dependencies`
+where you ran `imports`. The
+[command-line reference](cli.qmd#imports-check) shows the warning that such
+an entry gives.
+
+One answer changed with the merge. `imports` passed an undeclared module that
+happened to be installed where pycmdcheck ran. `dependencies` reports every
+undeclared module, installed or not.
 
 ### license
 
-Checks for license file.
+Looks for a license file and reports the license type. No options.
 
-```toml
-[tool.pycmdcheck.checks]
-license = true  # No additional options
-```
+It accepts a file named `LICENSE`, `LICENCE`, `COPYING` or `UNLICENSE` in the
+project root, in any letter case and with or without a suffix such as `.txt`
+or `-MIT`. It also accepts files in a `LICENSE/` or `LICENSES/` directory, and
+files named by `license-files` or `license.file` in `pyproject.toml`. A
+project with no license file, or with one shorter than 50 characters, gets a
+warning.
 
-Recognizes `LICENSE`, `LICENSE.txt`, `LICENSE.md`, `LICENSE.rst`, `LICENCE`
-(and `.txt`/`.md` variants), `COPYING`, `COPYING.txt`, plus suffixed/dual-license
-filenames such as `LICENSE-MIT`, `LICENSE-APACHE`, and `COPYING.LESSER`. A file
-referenced via `license = {file = "..."}` / `license-files` in `pyproject.toml`
-also counts.
+The type shown is the license declared in `pyproject.toml`, as a license
+expression such as `MIT OR Apache-2.0` or else as a license classifier. With
+neither, the check guesses from the text and says that it guessed.
 
-### docs
+The check also says whether the license is approved by the Open Source
+Initiative (OSI). It takes the answer from a list that ships with pycmdcheck,
+so it needs no network. The list is generated from the license list of the
+System Package Data Exchange (SPDX), which marks each license identifier
+that the OSI has approved. The script `tools/gen_osi_licenses.py` in the
+pycmdcheck repository writes it to `src/pycmdcheck/_osi_licenses.py`.
+`PSF-2.0` is added by hand, because the Python package index has an
+OSI-approved classifier for it.
 
-Checks for documentation.
+One case changes the status. When the declared license is an SPDX expression
+and none of the licenses in it is on the list, the result is a note with the
+code `license.not-osi-approved` and the message
+`Declared license is not OSI-approved`. `CC-BY-NC-4.0` is such an expression.
+One approved license is enough to pass, so `MIT OR CC-BY-NC-4.0` gets no
+note.
 
-```toml
-[tool.pycmdcheck.checks]
-docs = { enabled = true, require_readme = true }
-```
+Nothing else is graded. A declared word that is not an SPDX identifier, such
+as `BSD`, a license classifier, and a type guessed from the license text each
+get a detail line and leave the status alone. So does a declared value that
+is not an expression, such as `MIT/Apache-2.0` or a sentence. Its line stands
+above the type and reads
+`Declared license: MIT/Apache-2.0 (not an SPDX expression)`. The same line
+is shown when no license file is found or the file cannot be read. Beside a
+file that cannot be read, a declared expression is shown as the type too. A
+value longer than 200 characters or of more than one line, such as a license
+text pasted under `license.text`, gets no line.
 
-**Options:**
+### linting
+
+Runs a linter over the project.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `require_readme` | boolean | `true` | Require README file |
-| `check_docstrings` | boolean | `false` | Check public items for docstrings |
-| `check_readme_sections` | boolean | `false` | Check README mentions Installation/Usage |
-| `min_docstring_coverage` | float | `0.0` | Minimum docstring coverage % (0 = disabled) |
-
-**Examples:**
+| `tool` | `"auto"`, `"ruff"`, `"flake8"`, `"pylint"` | `"auto"` | Linter to run |
+| `args` | list of strings | `[]` | Extra arguments for the linter |
+| `timeout` | positive number | `120`, or `300` for pylint | Seconds the linter may run |
 
 ```toml
-# Basic (require README)
-docs = true
-
-# With docstring + section checking
-docs = { enabled = true, require_readme = true, check_docstrings = true, check_readme_sections = true }
+linting = { tool = "ruff", args = ["--select", "E,F,W"] }
 ```
+
+With `tool = "auto"` the check looks for a linter the project has configured,
+in this order.
+
+1. ruff, when `pyproject.toml` has a `[tool.ruff]` table, or when the project
+   has a `ruff.toml` or `.ruff.toml` file. A `[tool.ruff.lint]` table on its
+   own counts, because it sits inside `[tool.ruff]`.
+2. flake8, when the project has a `.flake8` file, or a `[flake8]` section in
+   `setup.cfg` or `tox.ini`.
+3. pylint, when `pyproject.toml` has a `[tool.pylint]` table, or when the
+   project has a `.pylintrc` or `pylintrc` file.
+
+A project with none of these is skipped with the message
+`No linter configured` and the skip reason `not-configured`. Under
+`--profile strict` the tool is ruff, whatever the project has configured and
+whatever `tool` says here.
+
+Findings are a warning. A linter that [could not run](#tool-could-not-run),
+for example because of an error in its configuration, is a warning as well,
+with a message such as `ruff could not run`.
+
+### metadata
+
+Checks the project metadata in `pyproject.toml`. No options.
+
+`name` and `version` are required, and a project without them is an error. So
+is a `pyproject.toml` that cannot be parsed. `description`, `readme`,
+`license` and `requires-python` are recommended. `authors` or `maintainers`,
+`urls` and `classifiers` are looked for as well. A missing field from these
+two groups is a note, and so is a value that cannot be right, such as a
+version that is not a valid version or a `readme` file that does not exist. A
+field listed in `dynamic` counts as present. A `[tool.poetry]` table is read
+when there is no `[project]` table. Metadata kept only in `setup.py` or
+`setup.cfg` is a warning.
+
+This check is never skipped. It is the one that reports a `pyproject.toml`
+that is missing or cannot be read, a missing `[project]` table, a missing
+`version`, and a `[project]` table whose `requires-python` is missing or
+invalid. The other checks that need one of these do not repeat the problem.
+They are skipped with the [skip reason](rules.qmd#skip-reasons)
+`prerequisite-failed`.
+
+One field is left to another check. For a legacy `[tool.poetry]` table this
+check does not list a missing `requires-python`. The
+[`python_versions`](#python_versions) check reports it.
+
+### py_typed
+
+Looks for the `py.typed` marker file. Python Enhancement Proposal (PEP) 561
+asks for it in a package that ships type annotations. No options.
+
+The check samples at most 20 files of a package that has no marker. It gives
+a note only when at least half of the public functions in the sample are
+annotated. A package below that mark needs no marker, so it is skipped with
+the message `py.typed not needed (package is not clearly typed)`. A project
+with no package directory, such as a single module, is skipped as well. The
+skip reason is `not-applicable` in both cases.
+
+When a file of the sample cannot be parsed and no public function was counted
+in the rest, the check is skipped with the message
+`Could not parse the package source` and the skip reason `parse-failed`.
+Correct the syntax error that the detail line names, or run pycmdcheck with
+the Python version the package is written for. Once a function was counted,
+the result comes from the files that were read, and the detail line names the
+ones left out.
+
+### python_versions
+
+Checks that `requires-python` does not allow a Python version that has
+reached its end of life. No options.
+
+The check uses the published end-of-life dates and waits 180 days after a
+version's date before it reports that version. Most packages still allow a
+version in the months after it retires, and the wait keeps the check from
+reporting them on the first day. Python 3.10 reached its end of life on
+2026-10-01, so it is reported from 2027-03-30. Until then
+`requires-python = ">=3.10"` passes.
+
+A requirement that allows a reported version is a note. The value is also
+read from `[tool.poetry]`, `setup.cfg` and `setup.py`.
+
+The check is skipped when it finds no value to judge in any of these places.
+
+| Situation | Skip reason |
+|-----------|-------------|
+| The `[project]` table has no `requires-python`, or one that is not a valid version specifier | `prerequisite-failed` |
+| `pyproject.toml` cannot be read | `prerequisite-failed` |
+| `pyproject.toml` is missing or has no `[project]` table, and neither `setup.py` nor `setup.cfg` holds the metadata | `prerequisite-failed` |
+| `requires-python` is listed in `dynamic`, or `setup.py` computes the value when it runs | `not-applicable` |
+
+The `metadata` check reports the first three. A constraint kept in a legacy
+`[tool.poetry]` table, in `setup.cfg` or in `setup.py` is judged by this
+check, so there a missing or invalid value gets a note from it.
+
+For a legacy `[tool.poetry]` table the `metadata` check leaves
+`requires-python` out of its list of missing recommended fields, so a missing
+`python` entry is reported once, by this check.
+
+### structure
+
+Checks that the project holds an importable package or module. No options.
+
+It accepts a src layout (`src/package/`), a flat layout (`package/`), a
+`lib/` or `python/` source directory, a source directory named by the build
+backend, a single-file module, a namespace package (PEP 420) and a stub-only
+package. Directories of Rust, C or front-end sources under `src/` are ignored.
+A directory in the project root whose name starts with an underscore, such as
+`_build` or `_vendor`, is not taken for a namespace package unless the build
+settings name it. A package that lies only under `_build` is therefore an
+error. A package list can name such a directory. So can a setuptools
+`packages.find` include pattern that itself starts with an underscore, such
+as `_acme*`. The pattern counts only when setuptools would collect the
+directory. No exclude pattern may match it, `where`, when set, must include
+the project root, and the search must take in namespace packages.
+`namespaces = false` in `pyproject.toml` and `packages = find:` in
+`setup.cfg` turn that off.
+
+When no package or module is found, the result is an error, with three
+exceptions.
+
+- A project that builds a native extension is skipped with the skip reason
+  `not-applicable`, because the build makes the module. The check goes by a
+  native build backend or build tool in `[build-system]`, extension modules
+  declared for setuptools, or a `Cargo.toml`, `CMakeLists.txt` or
+  `meson.build` file.
+- A project whose `src/` holds only sources in another language, with no
+  such sign of a native build, gets a note.
+- A project that has only a script in its root, such as `noxfile.py`, or a
+  package in a directory that none of the layouts above covers, gets a note.
+  Python files in a directory with no `__init__.py` do not count, and that
+  project is an error.
+
+A package directory with no `__init__.py` anywhere in it is a warning.
+
+### test_suite
+
+Looks for the project's tests without running them. No options.
+
+The check looks in these places, in this order, and stops at the first one
+that holds tests.
+
+1. A `tests` or `test` directory in the project root.
+2. A `tests` or `test` directory inside the package.
+3. A directory named by `testpaths` in the pytest configuration. That setting
+   is read from `pyproject.toml`, `pytest.ini`, `tox.ini` or `setup.cfg`. In
+   `pyproject.toml` it may be in the table `[tool.pytest.ini_options]` or in
+   `[tool.pytest]`, which pytest 9 reads. An entry is taken as the name of a
+   directory, so an entry with a wildcard is not used. At most 20 entries
+   are looked at.
+4. A file named `test_*.py`, `*_test.py`, `test.py` or `tests.py` in the
+   project root.
+5. A file named `test_*.py`, `*_test.py` or `tests.py` anywhere else in the
+   project. Hidden directories are not searched, and a file under
+   `site-packages` or `node_modules` does not count, because it belongs to
+   another project.
+
+A directory counts only when it holds a test module, at any depth. A test
+module is a Python file whose name does not start with an underscore and is
+not `conftest.py`. An empty `tests/` directory is not a test suite, and
+neither is one that holds only `__init__.py`, shared fixtures or data files.
+Directory names are matched in any letter case. A symbolic link to a
+directory is not followed, so the check never looks outside the project.
+
+A project with tests gets the message `Test suite present`, and a detail line
+names the place, for example `Found tests: tests/`. A project with none gets
+a warning with the code `test_suite.missing` and the message `No tests found`.
+
+The check reports that tests are present and nothing more. It does not run
+them and does not read what they cover. The [`tests`](#tests) check runs
+them. Both checks use the same search, so they always agree on whether there
+is a suite. Because it only reads files, `test_suite` is part of the `triage`
+profile, and `tests` is not.
+
+### tests
+
+Runs the project's test suite.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `runner` | `"pytest"`, `"unittest"` | `"pytest"` | Test runner |
+| `args` | list of strings | `[]` | Extra arguments for the runner |
+| `timeout` | positive number | `300` | Seconds the test run may take |
+
+```toml
+tests = { runner = "pytest", args = ["-x", "--tb=short"] }
+```
+
+The check returns one of these results for a run with pytest.
+
+| What happened | Status | Message |
+|---------------|--------|---------|
+| Every test passed | ok | `All tests passed` |
+| A test failed | error | `Tests failed` |
+| pytest could not collect the tests and exited with code 2, for example because a test module cannot be imported | error | `Tests could not be collected` |
+| pytest collected no tests | warning | `No tests collected` |
+| pytest had an internal error or a usage error, which are exit codes 3 and 4 | warning | `pytest could not run` |
+
+A suite that cannot be collected is an error because pytest stopped before it
+ran the tests, which is not a pass. The detail lines show the end of pytest's
+own report. The last row is the shared rule for a tool that
+[could not run](#tool-could-not-run).
+
+The check is skipped in two cases and starts no test runner in either.
+
+| Situation | Message | Skip reason |
+|-----------|---------|-------------|
+| The project has no tests | `No tests to run` | `prerequisite-failed` |
+| pytest is not installed | `pytest not installed` | `tool-missing` |
+
+A project with no tests is a real shortcoming, and it still gets a warning.
+The [`test_suite`](#test_suite) check gives it, with the code
+`test_suite.missing`, so the cause is reported once. This check has nothing
+to run and points at `test_suite` in a detail line. The search for tests
+comes first, so a project with no tests is skipped whatever `runner` says.
+
+With `runner = "unittest"` the check runs `python -m unittest discover` with
+the `python` found on `PATH`, or `python3` when there is no `python`. Failing
+tests are an error there as well. A run that ends before any test, or with a
+usage error, is a warning with the message `unittest could not run`.
+
+### typing
+
+Runs a type checker over the package.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `tool` | `"auto"`, `"mypy"`, `"pyright"` | `"auto"` | Type checker to run |
+| `strict` | boolean | `false` | Pass `--strict` to mypy |
+| `args` | list of strings | `[]` | Extra arguments for the type checker |
+| `timeout` | positive number | `300` | Seconds the type checker may run |
+
+```toml
+typing = { tool = "mypy", strict = true }
+```
+
+With `tool = "auto"` the check looks for a type checker the project has
+configured, in this order.
+
+1. mypy, when `pyproject.toml` has a `[tool.mypy]` table, when the project
+   has a `mypy.ini` or `.mypy.ini` file, or when `setup.cfg` has a `[mypy]`
+   section.
+2. pyright, when `pyproject.toml` has a `[tool.pyright]` table, or when the
+   project has a `pyrightconfig.json` file.
+
+A project with neither is skipped with the message
+`No type checker configured` and the skip reason `not-configured`. Under
+`--profile strict` the tool is mypy with `--strict`, whatever the project has
+configured and whatever `tool` says here.
+
+Type errors are an error, and the details list the first 10. When pyright
+ends with exit code 1, its warnings are listed with the errors and counted
+apart in the message, as in `Found 1 type error(s) and 2 warning(s)`. When
+the check can read no line of the output, for example because `args` asks
+the tool for JSON, the message is `Found some type error(s)` and the details
+show the end of the tool's standard output, at most 10 lines.
+
+A type checker that [could not run](#tool-could-not-run) is a warning, with
+the message `mypy could not run` or `pyright could not run`. That covers a
+problem in the tool's configuration and a package layout that mypy cannot
+analyze.
+
+`strict` applies to mypy only, also when `"auto"` chose mypy. pyright has no
+`--strict` flag, so with pyright the option is not passed on and a detail
+line says so. Turn on pyright's strict mode with
+`typeCheckingMode = "strict"` in `[tool.pyright]` or in `pyrightconfig.json`.
+
+### urls
+
+Requests each `http` or `https` address in `[project.urls]` and reports the
+ones that do not answer. This check uses the network.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `timeout` | number from 1 to 30 | `10` | Seconds to wait for each request |
+
+```toml
+urls = { timeout = 5 }
+```
+
+A `timeout` below 1 is raised to 1 and one above 30 is lowered to 30. The
+check requests at most 20 addresses and stops after 60 seconds in total. An
+address that answers 404 or 410, or whose host name does not exist, is a
+warning. One that could not be verified, for example because of a timeout or a
+403 answer, is a note. When two or more hosts were tried and none answered,
+the check is skipped with the message
+`Network unavailable, project URLs not checked` and the skip reason
+`network-unavailable`.
+
+The check is also skipped when it has no address to request.
+
+| Situation | Skip reason |
+|-----------|-------------|
+| The project declares no URLs, lists `urls` in `dynamic`, or has no `http` or `https` address on a public host | `not-applicable` |
+| `pyproject.toml` is missing, cannot be read, has no `[project]` table, or has a `urls` value that is not a table | `prerequisite-failed` |
+
+The `metadata` check reports the cases of the second row. A `[project.urls]`
+table that holds a value other than a string is a note, and no address is
+requested.
+
+#### Local and Private Hosts
+
+The check does not contact a host on your own machine or your own network. No
+request is made when the host of an address is `localhost`, is empty, or
+resolves to an address that is not globally routable. That covers loopback
+addresses such as `127.0.0.1`, private ranges such as `10.0.0.0/8` and
+`192.168.0.0/16`, link-local addresses such as `169.254.169.254`, the shared
+range `100.64.0.0/10`, and reserved, multicast and unspecified addresses.
+
+The host is tested as it is written and as it reads once its percent escapes
+are decoded, so `http://%31%32%37.0.0.1/` is refused like `http://127.0.0.1/`.
+The same test is applied to every redirect, so a public address that
+redirects to a private one is not followed.
+
+The check connects to the address it tested. For each request it looks the
+host name up once, refuses the request if one of the addresses is local or
+private, and opens the connection to one of those same addresses. The name is
+not looked up a second time, so a name server cannot give one answer to the
+test and another to the connection.
+
+A redirect is followed only to another `http` or `https` address. A redirect
+that leads anywhere else, to an `ftp` address for example, is not followed,
+and the host it names is not looked up. The address is listed as
+`could not verify: redirects to a URL that is not http or https` and counts
+as one that could not be verified.
+
+An address that was left out is listed as
+`not checked (local or private address)`. It counts as neither unreachable nor
+unverified, and the numbers in the message leave it out. This is
+`pycmdcheck --check urls --verbose` on a package whose two project URLs are
+local. No address was requested, so the check is skipped with the reason
+`not-applicable`.
+
+```
+│  ○  │ urls  │ No public project URLs to check │ 0.01s │
+└─────┴───────┴─────────────────────────────────┴───────┘
+
+urls details:
+  Documentation: http://localhost:8000/ not checked (local or private address)
+  Dashboard: http://127.0.0.1:8000/status not checked (local or private address)
+```
+
+The only switch is the environment variable `PYCMDCHECK_ALLOW_PRIVATE_URLS`.
+Set it to `1` in the environment that runs pycmdcheck, and local and private
+addresses are requested like any other. The rule for redirects stays in
+force. There is no option for this in `pyproject.toml` and none on the command
+line, because the files of the checked project are not trusted. A project
+cannot set the variable.
+
+One case is left. When a request goes through a proxy, the proxy looks the
+name up and opens the connection. The check still tests the name with a
+lookup of its own, and it cannot hold the proxy to the address it tested.
+Python takes a proxy from environment variables such as `https_proxy`, and
+from the system settings on macOS and Windows. Do not rely on this rule alone
+when you check a repository you do not trust from behind a proxy. The `triage`
+profile does not run the `urls` check at all.
+
+### version
+
+Compares the `__version__` written in the package with the `version` in
+`pyproject.toml`. No options.
+
+Two versions that differ are an error. The comparison follows PEP 440, the
+Python standard for version numbers, so `1.0` equals `1.0.0`. The result is
+ok only when two versions written out in the files were compared and agree.
+
+A project with nothing to compare is skipped.
+
+| Situation | Skip reason |
+|-----------|-------------|
+| `version` is listed in `dynamic` | `not-applicable` |
+| No package or module was found, or the code has no `__version__` | `not-applicable` |
+| `__version__` is set when the code runs, for example by a call to `importlib.metadata.version()` or by an import from another module | `not-applicable` |
+| `__version__` is written as a number or a tuple, such as `1.0` or `(1, 0)`. The message is `__version__ is not a string`. | `not-applicable` |
+| `pyproject.toml` is missing, cannot be read, has no `[project]` table, or has no `version` | `prerequisite-failed` |
+
+The `metadata` check reports the cases of the last row.
+
+When the file that should hold `__version__` cannot be parsed, the check is
+skipped with the message `Could not read __version__ from code` and the skip
+reason `parse-failed`. Correct the syntax error that the detail line names,
+or run pycmdcheck with the Python version the package is written for.
+
+## Statuses Each Check Can Return
+
+| Check | Statuses |
+|-------|----------|
+| `build` | ok, warning, error, skipped |
+| `changelog` | ok, note, warning |
+| `ci` | ok, note |
+| `citation` | ok, note |
+| `community` | ok, note |
+| `dependencies` | ok, note, warning, skipped |
+| `docs` | ok, note, warning, skipped |
+| `doctests` | ok, warning, error, skipped |
+| `formatting` | ok, warning, error, skipped |
+| `license` | ok, note, warning |
+| `linting` | ok, warning, error, skipped |
+| `metadata` | ok, note, warning, error |
+| `py_typed` | ok, note, skipped |
+| `python_versions` | ok, note, skipped |
+| `structure` | ok, note, warning, error, skipped |
+| `test_suite` | ok, warning |
+| `tests` | ok, warning, error, skipped |
+| `typing` | ok, warning, error, skipped |
+| `urls` | ok, note, warning, skipped |
+| `version` | ok, error, skipped |
+
+One rule decides between two of these statuses. A check that did not look at
+anything is skipped, and its [skip reason](rules.qmd#skip-reasons) says why.
+A note always names something the author of the package can improve.
+
+Every note, warning and error carries at least one rule code, and
+[Rule Codes](rules.qmd#rules-of-each-check) lists the codes of each check with
+the status they carry. The deprecated [`imports`](#imports) check is always
+skipped and has no row here.
+
+Two more cases apply to every check. A check that raises an exception is
+reported as an error, and a check that `--fail-fast` did not start is reported
+as skipped with the skip reason `fail-fast`.
 
 ## Complete Example
 
 ```toml
 [tool.pycmdcheck]
-fail_on = ["error", "warning"]
+fail_on = ["warning"]
 
 [tool.pycmdcheck.checks]
-metadata = true
-structure = true
-tests = { enabled = true, runner = "pytest" }
-linting = { enabled = true, tool = "ruff", args = ["--select", "E,F,W,I"] }
-typing = { enabled = true, tool = "mypy", strict = true }
-formatting = { enabled = true, tool = "auto" }
-imports = true
-license = true
-dependencies = true
-build = true
-version = true
-py_typed = true
-docs = { enabled = true, require_readme = true, check_docstrings = false }
-# pyOpenSci / community checks
-community = true
-ci = true
-changelog = true
-citation = true
-python_versions = true
-urls = true
-doctests = true
+tests = { runner = "pytest", args = ["-x"], timeout = 600 }
+# A named tool runs whether or not the project has configured it.
+linting = { tool = "ruff", args = ["--select", "E,F,W,I"] }
+typing = { tool = "mypy", strict = true }
+formatting = { tool = "ruff" }
+docs = { check_readme_sections = true, min_docstring_coverage = 80 }
+build = { timeout = 300 }
+urls = { timeout = 5 }
+doctests = false
+citation = false
+```
+
+## A Settings File Outside the Project {#config-file}
+
+`pycmdcheck --config FILE` takes the profile, the checks and their options
+from `FILE` and does not read the `[tool.pycmdcheck]` table of the directory
+it checks. The file is for someone who checks repositories they do not own,
+such as a review bot or an organization with one standard for all its
+packages. They cannot put settings into those repositories, so the file is
+kept in a repository of their own, where a change to it can be reviewed.
+pycmdcheck does not test where the file is. A file inside the checked
+directory is accepted, and it would hand the settings back to that
+directory.
+
+The [command-line reference](cli.qmd#config-file) shows a run. It also says
+when a profile on the command line is enough, and how `--config` works with
+`--check`, with `--skip` and with `--fail-on`. The short form of `--skip` is
+`-s`. This section is the reference for the file.
+
+```toml
+# Start from the built-in triage profile, which only reads files.
+profile = "triage"
+fail_on = "warning"
+
+[checks]
+citation = false
+docs = { check_docs_site = false }
+```
+
+That file runs 11 of the 12 checks of the `triage` profile. It leaves
+`citation` out, does not ask for documentation beyond the README, and makes
+the run fail on warnings as well as on errors.
+
+The file is written in TOML (Tom's Obvious Minimal Language), the format of
+`pyproject.toml`. It has to be encoded as UTF-8 (the 8-bit Unicode
+Transformation Format) without a byte order mark, and it can be no larger
+than 1 mebibyte (MiB), which is 1,048,576 bytes.
+
+### The Keys of the File {#config-file-keys}
+
+| Key | Value | Meaning |
+|-----|-------|---------|
+| `profile` | `"minimal"`, `"triage"`, `"core"`, `"pyopensci"` or `"strict"` | The built-in [profile](cli.qmd#profiles) the run starts from. Required. |
+| `fail_on` | `"error"`, `"warning"` or `"note"`, or a list of them | The status from which the run exits with code 1. Optional. Without it the value is `"error"`. |
+| `checks` | A table, written under a `[checks]` line | The checks to take out of the profile and the options to set. Optional. |
+
+Any other key at the top of the file is an error. `profile` and `fail_on`
+have to stand above the `[checks]` line, because TOML reads every line below
+it as part of that table.
+
+`profile` names one of the built-in profiles. You cannot define a named
+profile of your own, in this file or anywhere else, because a name that is
+not built in would have to be looked up in the repository being checked. The
+deprecated name `default` is not accepted here. Write `core`.
+
+`fail_on` is a threshold, as [`fail_on`](#fail_on) in `pyproject.toml` is. It
+may be one word or a list. In a list the least severe status counts, and an
+empty list means `"error"`. A `--fail-on` option on the command line wins
+over it.
+
+### The checks Table {#config-file-checks}
+
+Each key under `[checks]` is the name of a check that is in the profile. Its
+value has one of three forms.
+
+| Entry | What it does |
+|--------------|--------------|
+| `citation = false` | Takes the check out of the run |
+| `citation = true` | Keeps the check. This changes nothing, because the profile runs it already. |
+| `docs = { check_docs_site = false }` | Keeps the check and sets options for it |
+
+A table of options may also hold `enabled`. With `enabled = false` the check
+is taken out, as it is with `false`.
+
+A file can take checks out of a profile and cannot add one. An entry for a
+check that is not in the profile is an error, whatever its value. A custom
+check is in no profile, so a file cannot name one. A file that takes out
+every check is an error as well.
+
+### Options a File May Set {#config-file-options}
+
+| Check | Options |
+|-------|--------------------------|
+| `build` | `args`, `timeout` |
+| `docs` | `require_readme`, `check_readme_sections`, `check_docs_site`, `check_docstrings`, `min_docstring_coverage` |
+| `doctests` | `args`, `timeout` |
+| `formatting` | `tool`, `args`, `timeout` |
+| `linting` | `tool`, `args`, `timeout` |
+| `tests` | `runner`, `args`, `timeout` |
+| `typing` | `tool`, `strict`, `args`, `timeout` |
+| `urls` | `timeout` |
+
+The other 12 checks have no option besides `enabled`. The sections under
+[Per-Check Options](#per-check-options) say what each option does and give
+its default.
+
+A settings file is read strictly. The `[tool.pycmdcheck]` table of a project
+is read with tolerance, as [Basic Configuration](#basic-configuration)
+describes. There a wrong value is ignored, moved into its range, or reported
+in the result of the check. In a settings file each of these is an error,
+and no check runs.
+
+- An option that the check does not have.
+- A value of the wrong type.
+- A value outside its range.
+
+| Option | Value a settings file accepts |
+|--------------------|--------------------|
+| `require_readme`, `check_readme_sections`, `check_docs_site`, `check_docstrings`, `strict`, `enabled` | `true` or `false`. A string such as `"no"` is refused. |
+| `min_docstring_coverage` | A number from 0 to 100 |
+| `tool`, `runner` | One of the values that the section of the check lists |
+| `args` | A list of strings. It may be empty. |
+| `timeout` of the six [tool checks](#options-shared-by-the-tool-checks) | A number above 0 and at most 86400 |
+| `timeout` of `urls` | A number from 1 to 30 |
+
+`true` and `false` do not count as numbers.
+
+### The Order of the Options {#config-file-order}
+
+The options of a run with `--config` are put together in three steps, and a
+later step wins.
+
+1. The built-in defaults. They are pytest as the test runner and `"auto"` for
+   the linter, the type checker and the formatter.
+2. The options of the profile.
+3. The options of the file.
+
+A file can therefore change an option that its profile sets. With
+`profile = "triage"`, the entry `docs = { min_docstring_coverage = 80 }`
+turns the docstring scan on, although the profile turns it off.
+
+Nothing in this order comes from the checked project. Its `[tool.pycmdcheck]`
+table is not read. It supplies no option, no enable flag and no `fail_on`,
+and no warning about a malformed entry in it is printed.
+
+The checks still read the other files of the project, which is their job.
+With `tool = "auto"`, for example, the `linting`, `typing` and `formatting`
+checks find the tool from the project's own configuration files, as
+[Choosing the Tool](#tool-auto) describes.
+
+### Mistakes in the File {#config-file-errors}
+
+A mistake in the file is a usage error. pycmdcheck exits with code 2 before
+any check runs and prints nothing on standard output. After its two usage
+lines it writes one line to standard error. The line starts with
+`Error: Config file`, names the file as it was given, and says what is
+wrong. `--exit-zero` does not change the exit code. The first mistake that is
+found ends the run, so a file with two mistakes takes two runs to correct.
+
+| Mistake | Message |
+|----------|---------------|
+| The file is larger than 1 MiB, or `FILE` is not a regular file, for example a device | `The file could not be read (larger than 1 MiB).` or `The file could not be read (not a regular file).` |
+| The file is not UTF-8 | `The file is not valid UTF-8.` |
+| The file starts with a byte order mark | `The file starts with a UTF-8 byte order mark, which TOML does not allow.` |
+| The file is not valid TOML | `The file is not valid TOML. Invalid value (at line 1, column 11).` The second sentence is the parser's. |
+| A key at the top of the file is not one of the three. A `pyproject.toml` passed by mistake ends here. | `Unknown key(s) build-system, project. A config file holds profile, fail_on and a [checks] table.` |
+| There is no `profile` | `The file names no profile. Add a line such as profile = "triage" above [checks]. The profiles are minimal, triage, core, pyopensci, strict.` |
+| The `profile` line is below `[checks]` | `The profile line is below [checks], where it is read as a check. Move it above [checks].` |
+| `profile` is not a built-in profile | `profile must be one of minimal, triage, core, pyopensci, strict, but it is "house".` |
+| `fail_on` is not a status | `fail_on must be error, warning or note, or a list of them, but it is "fatal".` |
+| `checks` is not a table | `checks must be a table, but it is "all".` |
+| A name under `[checks]` is not an installed check | `Unknown check licence in [checks].` The message then lists the checks of the profile. For a `fail_on` line below `[checks]` it also says to move the line. |
+| A check is not in the profile | `tests is not in the profile triage. A config file can take a check out of a profile and cannot add one.` |
+| An entry is not `true`, `false` or a table | `docs must be true, false or a table of options, but it is 3.` |
+| A check does not have the option | `Unknown option colour for the check docs. Its options are enabled, require_readme, check_readme_sections, check_docs_site, check_docstrings, min_docstring_coverage.` |
+| A value has the wrong type | `docs.check_docstrings must be true or false, but it is "no".` |
+| A value is outside its range | `urls.timeout must be a number from 1 to 30, but it is 31.` |
+| An item of `args` is not a string | `tests.args must be a list of strings, but it holds 2.` |
+| The file leaves no check | `The file leaves no check to run.` |
+
+A message shows a value as it is written in TOML, so a string appears in
+double quotes. `pycmdcheck --config FILE --list` reads the file and runs no
+check, which makes it a quick test of a file that has changed.
+
+A `FILE` that does not exist, is a directory or cannot be opened for reading
+is refused before pycmdcheck looks into it. The exit code is 2 as well, and
+the last line on standard error has another form. Its end is
+`does not exist.`, `is a directory.` or `is not readable.`, and this is the
+first of the three.
+
+```
+Error: Invalid value for '--config': File '.github/pycmdcheck-triage.toml' does not exist.
 ```

@@ -8,36 +8,54 @@ from pathlib import Path
 from typing import Any
 
 from pycmdcheck.checks.base import BaseCheck
-from pycmdcheck.results import CheckResult, CheckStatus
+from pycmdcheck.fileio import display_path, find_project_file
+from pycmdcheck.results import CheckResult, CheckStatus, Finding, most_severe
 
 
 class CommunityCheck(BaseCheck):
     """Check for community health files.
 
-    Verifies that CONTRIBUTING.md and CODE_OF_CONDUCT.md exist in
-    the package directory.
+    Looks for a contributing guide and a code of conduct in the project
+    root, ``.github/``, ``docs/`` and ``doc/``. Default files that an
+    organization keeps in its own ``.github`` repository are not part of a
+    clone, so this check cannot see them.
 
     Attributes:
         name: The check identifier ("community").
         description: Human-readable description of this check.
+        rules: The codes this check can report.
+        hints: What to do about each code.
     """
 
     name = "community"
     description = "Check for community health files"
+    rules = {
+        "community.missing-contributing": (
+            "No contributing guide found in the repository"
+        ),
+        "community.missing-code-of-conduct": (
+            "No code of conduct found in the repository"
+        ),
+    }
+    hints = {
+        "community.missing-contributing": (
+            "Add a CONTRIBUTING.md file to the project root or .github/ that says "
+            "how to report problems and send changes."
+        ),
+        "community.missing-code-of-conduct": (
+            "Add a CODE_OF_CONDUCT.md file to the project root or .github/, with a "
+            "text such as the Contributor Covenant."
+        ),
+    }
 
-    CONTRIBUTING_FILENAMES = [
-        "CONTRIBUTING.md",
-        "CONTRIBUTING.rst",
-        "CONTRIBUTING.txt",
-        "CONTRIBUTING",
-    ]
+    # File names without extension, matched without regard to letter case.
+    # Each may end in .md, .rst, .txt or nothing.
+    CONTRIBUTING_STEMS = ("CONTRIBUTING",)
+    CODE_OF_CONDUCT_STEMS = ("CODE_OF_CONDUCT", "CODE-OF-CONDUCT", "CONDUCT")
 
-    CODE_OF_CONDUCT_FILENAMES = [
-        "CODE_OF_CONDUCT.md",
-        "CODE_OF_CONDUCT.rst",
-        "CODE_OF_CONDUCT.txt",
-        "CODE_OF_CONDUCT",
-    ]
+    # GitHub reads community health files from .github/, the repository root
+    # and docs/. A file in any of them counts here, and in doc/ as well.
+    SEARCH_DIRS = ("", ".github", "docs", "doc")
 
     def run(self, package_path: Path, config: dict[str, Any]) -> CheckResult:
         """Check for community health files.
@@ -50,24 +68,33 @@ class CommunityCheck(BaseCheck):
             A CheckResult with:
 
             - OK status if both files are present
-            - NOTE status if one or both files are missing
+            - NOTE status if one or both files are not in the repository
         """
         details: list[str] = []
         missing: list[str] = []
+        findings: list[Finding] = []
 
-        # Check for CONTRIBUTING
-        contributing = self._find_file(package_path, self.CONTRIBUTING_FILENAMES)
-        if contributing:
-            details.append(f"Found: {self._rel(package_path, contributing)}")
-        else:
-            missing.append("CONTRIBUTING.md")
-
-        # Check for CODE_OF_CONDUCT
-        coc = self._find_file(package_path, self.CODE_OF_CONDUCT_FILENAMES)
-        if coc:
-            details.append(f"Found: {self._rel(package_path, coc)}")
-        else:
-            missing.append("CODE_OF_CONDUCT.md")
+        wanted = (
+            (
+                "CONTRIBUTING.md",
+                self.CONTRIBUTING_STEMS,
+                "community.missing-contributing",
+            ),
+            (
+                "CODE_OF_CONDUCT.md",
+                self.CODE_OF_CONDUCT_STEMS,
+                "community.missing-code-of-conduct",
+            ),
+        )
+        for label, stems, code in wanted:
+            found = find_project_file(package_path, stems, subdirs=self.SEARCH_DIRS)
+            if found is not None:
+                details.append(f"Found: {display_path(found, package_path)}")
+            else:
+                missing.append(label)
+                findings.append(
+                    Finding(code, f"{label} not found in repository", CheckStatus.NOTE)
+                )
 
         if not missing:
             return CheckResult(
@@ -77,32 +104,16 @@ class CommunityCheck(BaseCheck):
                 details=details,
             )
 
-        details.append(f"Missing: {', '.join(missing)}")
+        searched = ", ".join(f"{d}/" if d else "root" for d in self.SEARCH_DIRS)
+        details.append(f"Not found in repository ({searched}): {', '.join(missing)}")
+        details.append(
+            "Organization-level default community health files cannot be "
+            "detected by this check"
+        )
         return CheckResult(
             name=self.name,
-            status=CheckStatus.NOTE,
-            message=f"Missing {len(missing)} community file(s)",
+            status=most_severe(findings),
+            message=f"{len(missing)} community file(s) not found in repository",
             details=details,
+            findings=findings,
         )
-
-    # GitHub resolves community-health files from the repo root, .github/, and
-    # docs/ (in that order). Mirror that so files in those locations count.
-    SEARCH_DIRS = ("", ".github", "docs")
-
-    def _find_file(self, package_path: Path, filenames: list[str]) -> Path | None:
-        """Find a community file in the root, ``.github/``, or ``docs/``."""
-        for subdir in self.SEARCH_DIRS:
-            base = package_path / subdir if subdir else package_path
-            for filename in filenames:
-                candidate = base / filename
-                if candidate.exists():
-                    return candidate
-        return None
-
-    @staticmethod
-    def _rel(package_path: Path, path: Path) -> str:
-        """Return *path* relative to *package_path* for display."""
-        try:
-            return str(path.relative_to(package_path))
-        except ValueError:
-            return path.name
