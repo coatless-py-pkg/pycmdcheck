@@ -18,6 +18,7 @@ import inspect
 import json
 import re
 import sys
+import tomllib
 from collections.abc import Collection, Iterable, Iterator
 from pathlib import Path
 
@@ -493,3 +494,34 @@ def test_rules_page_lists_every_skip_reason_with_its_checks(docs_dir: Path) -> N
         for reason in _skip_reasons_named(_module_source(cls)):
             in_code[reason].add(name)
     assert documented == in_code
+
+
+# ── The version of the release ────────────────────────────────────────
+
+# A command pinned to one release, such as "uvx pycmdcheck@1.2.3".
+_PINNED_RE = re.compile(r"pycmdcheck@(\d+\.\d+\.\d+)")
+# The version in a sample of a JSON report.
+_SAMPLE_VERSION_RE = re.compile(r'"pycmdcheck_version": "(\d+\.\d+\.\d+)"')
+
+
+def test_pinned_versions_name_the_version_of_the_package(repo_root: Path) -> None:
+    """A page that pins a version pins the one this tree would release.
+
+    The bump settings in pyproject.toml rewrite these places, and this test
+    fails for a place they missed.
+    """
+    pyproject = tomllib.loads(_read(repo_root / "pyproject.toml"))
+    version = pyproject["project"]["version"]
+    assert pyproject["tool"]["bumpversion"]["current_version"] == version
+    pages = [repo_root / "README.md", *(repo_root / "docs").glob("*.qmd")]
+    stale = [
+        f"{page.name}: {found}"
+        for page in pages
+        if page.is_file()
+        for pattern in (_PINNED_RE, _SAMPLE_VERSION_RE)
+        for found in pattern.findall(_read(page))
+        if found != version
+    ]
+    assert stale == []
+    # The README shows one pinned command, so the settings have a line to keep.
+    assert _PINNED_RE.search(_read(repo_root / "README.md"))

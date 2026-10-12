@@ -82,9 +82,6 @@ Changelog = "https://github.com/coatless-py-pkg/pycmdcheck/blob/main/CHANGELOG.m
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pycmdcheck"]
-# Hatchling writes 2.5 by default. The upload step of release.yml checks the
-# metadata with a library that knows 2.4 at most, and 0.1.1 went out as 2.4.
-core-metadata-version = "2.4"
 
 [tool.hatch.build.targets.wheel.force-include]
 # The Agent Skill has one copy, in skills/. The build puts it inside the
@@ -104,7 +101,6 @@ include = [
     "/LICENSE",
     "/pyproject.toml",
 ]
-core-metadata-version = "2.4"
 
 [tool.pycmdcheck]
 # Configuration for running pycmdcheck on itself. Every check is enabled by
@@ -144,3 +140,58 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+
+[tool.bumpversion]
+# "uvx bump-my-version bump minor" (or patch, or major) writes the new version
+# to every place listed here. tests/test_docs_sync.py fails for a pinned
+# command that was missed.
+current_version = "0.2.0"
+commit = false
+tag = false
+allow_dirty = true
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = "name = \"pycmdcheck\"\nversion = \"{current_version}\""
+replace = "name = \"pycmdcheck\"\nversion = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = ".claude-plugin/plugin.json"
+search = '"version": "{current_version}"'
+replace = '"version": "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "pycmdcheck@{current_version}"
+replace = "pycmdcheck@{new_version}"
+
+[[tool.bumpversion.files]]
+glob = "docs/*.qmd"
+search = "pycmdcheck@{current_version}"
+replace = "pycmdcheck@{new_version}"
+ignore_missing_version = true
+
+# The version shown in the samples of a report.
+[[tool.bumpversion.files]]
+glob = "docs/*.qmd"
+search = '"pycmdcheck_version": "{current_version}"'
+replace = '"pycmdcheck_version": "{new_version}"'
+ignore_missing_version = true
+
+[[tool.bumpversion.files]]
+glob = "docs/*.qmd"
+search = "with pycmdcheck {current_version}."
+replace = "with pycmdcheck {new_version}."
+ignore_missing_version = true
+
+# Changes not yet released are listed under this heading.
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "# pycmdcheck (development version)"
+replace = "# pycmdcheck {new_version}"
+ignore_missing_version = true

@@ -61,6 +61,21 @@ Open `docs/_site/index.html` to read the result. Both `docs/reference/` and
 `docs/_site/` are generated, so git does not track them. The pages you edit
 are the `.qmd` files in `docs/` and the docstrings in the source.
 
+## Make a release
+
+List each change a user can notice as a bullet under the heading
+`# pycmdcheck (development version)` at the top of `CHANGELOG.md`. When it
+is time to release, one command writes the new version everywhere.
+
+```bash
+uvx bump-my-version bump minor   # or patch, or major
+```
+
+It changes `pyproject.toml`, the lockfile, the plugin file, the changelog
+heading and every pinned command in the README and the docs. Open a pull
+request with the result. Once it is merged and main is green, push the tag
+`vX.Y.Z`, which publishes the release to PyPI.
+
 ## Add a check
 
 A new built-in check has to be named in several places. The tests in
