@@ -64,8 +64,9 @@ are the `.qmd` files in `docs/` and the docstrings in the source.
 ## Make a release
 
 List each change a user can notice as a bullet under the heading
-`# pycmdcheck (development version)` at the top of `CHANGELOG.md`. When it
-is time to release, one command writes the new version everywhere.
+`# pycmdcheck (development version)` at the top of `CHANGELOG.md`. The
+release workflow commits that heading to main after each release. When it is
+time to release, one command writes the new version everywhere.
 
 ```bash
 uvx bump-my-version bump minor   # or patch, or major
@@ -75,6 +76,10 @@ It changes `pyproject.toml`, the lockfile, the plugin file, the changelog
 heading and every pinned command in the README and the docs. Open a pull
 request with the result. Once it is merged and main is green, push the tag
 `vX.Y.Z`, which publishes the release to PyPI.
+
+If the last job of the release, the one that adds the heading, fails, the
+release is already out. Run the failed job again, or start the Development
+version workflow by hand.
 
 ## Add a check
 

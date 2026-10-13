@@ -1,0 +1,40 @@
+name: Development version
+
+on:
+  # The release workflow calls this once a release is out.
+  workflow_call:
+  # Lets a maintainer run it by hand.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changelog-heading:
+    name: Add the changelog heading for unreleased work
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed to commit the heading to the default branch
+    env:
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      # A release runs from a tag, and the heading belongs on the default
+      # branch. The token stays in the checkout because the last step pushes.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Add the heading when it is missing
+        # The bump settings in pyproject.toml rename this heading to the new
+        # version, and tests/test_docs_sync.py keeps the two in step.
+        run: |
+          heading='# pycmdcheck (development version)'
+          if grep -qxF "$heading" CHANGELOG.md; then
+            echo "CHANGELOG.md already has the heading."
+            exit 0
+          fi
+          printf '%s\n\n' "$heading" | cat - CHANGELOG.md > CHANGELOG.new
+          mv CHANGELOG.new CHANGELOG.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet -m "Start the development version" CHANGELOG.md
+          git push origin "HEAD:${DEFAULT_BRANCH}"
