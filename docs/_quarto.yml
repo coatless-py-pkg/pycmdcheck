@@ -25,6 +25,8 @@ website:
         href: reference/index.qmd
       - text: Changelog
         href: changelog.qmd
+      - text: Blog posts
+        href: https://blog.thecoatlessprofessor.com/projects/pycmdcheck/
     right:
       - icon: github
         href: https://github.com/coatless-py-pkg/pycmdcheck
